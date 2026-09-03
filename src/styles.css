@@ -1,0 +1,671 @@
+/* ---------------------------------------------------------------
+   Tokens - palette matches the locked look used by Projects.jsx.
+   Gold is the only accent. Blue and teal live in the ambient light.
+   --------------------------------------------------------------- */
+:root {
+  --bg: #0c0e13;
+  --ink: #ece7dc;
+  --ink-soft: #a6a294;
+  --ink-dim: #cfcabc;
+  --gold: #d0a44c;
+  --gold-soft: #e3c789;
+  --glass: rgba(255, 255, 255, 0.045);
+  --glass-line: rgba(255, 255, 255, 0.09);
+
+  --font-display: "Space Grotesk", ui-sans-serif, system-ui, "Segoe UI", sans-serif;
+  --font-body: "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+
+  --shell: clamp(1.1rem, 5vw, 4rem);
+  color-scheme: dark;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: 16px;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+  overflow-x: hidden;
+}
+
+h1,
+h2,
+h3 {
+  font-family: var(--font-display);
+  font-weight: 600;
+  letter-spacing: -0.025em;
+  line-height: 1.1;
+}
+
+a {
+  color: var(--gold-soft);
+}
+
+:where(a, button):focus-visible {
+  outline: 2px solid var(--gold-soft);
+  outline-offset: 3px;
+  border-radius: 6px;
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.skip-link {
+  position: absolute;
+  top: -100px;
+  left: 1rem;
+  z-index: 50;
+  padding: 0.7rem 1.1rem;
+  border-radius: 10px;
+  background: var(--gold);
+  color: #1a1204;
+  font-weight: 600;
+  text-decoration: none;
+  transition: top 0.18s ease;
+}
+
+.skip-link:focus {
+  top: 1rem;
+}
+
+/* ---------------------------------------------------------------
+   Ambient light - gold, blue and teal drifting behind the glass.
+   Fixed and cheap: three blurred circles, transform-only motion.
+   --------------------------------------------------------------- */
+.app-ambient {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+.app-blob {
+  position: absolute;
+  width: 52vw;
+  height: 52vw;
+  max-width: 680px;
+  max-height: 680px;
+  border-radius: 50%;
+  filter: blur(100px);
+  opacity: 0.5;
+  will-change: transform;
+}
+
+.app-blob--gold {
+  top: -14%;
+  left: -4%;
+  background: radial-gradient(circle at 50% 50%, rgba(208, 164, 76, 0.5), transparent 66%);
+  animation: drift-a 28s ease-in-out infinite;
+}
+
+.app-blob--blue {
+  top: 30%;
+  right: -12%;
+  background: radial-gradient(circle at 50% 50%, rgba(59, 110, 165, 0.42), transparent 66%);
+  animation: drift-b 34s ease-in-out infinite;
+}
+
+.app-blob--teal {
+  bottom: -18%;
+  left: 28%;
+  background: radial-gradient(circle at 50% 50%, rgba(47, 143, 131, 0.34), transparent 66%);
+  animation: drift-c 31s ease-in-out infinite;
+}
+
+@keyframes drift-a {
+  0%,
+  100% { transform: translate(0, 0); }
+  50% { transform: translate(6%, 6%); }
+}
+
+@keyframes drift-b {
+  0%,
+  100% { transform: translate(0, 0); }
+  50% { transform: translate(-6%, 8%); }
+}
+
+@keyframes drift-c {
+  0%,
+  100% { transform: translate(0, 0); }
+  50% { transform: translate(5%, -7%); }
+}
+
+main {
+  position: relative;
+  z-index: 1;
+}
+
+/* ---------------------------------------------------------------
+   Hero
+   --------------------------------------------------------------- */
+.hero {
+  position: relative;
+  padding: clamp(5rem, 15vh, 9rem) var(--shell) clamp(3.5rem, 9vw, 6rem);
+}
+
+.hero-inner {
+  max-width: 46rem;
+}
+
+.hero-eyebrow {
+  margin: 0 0 1.35rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.4rem 0.85rem;
+  border: 1px solid var(--glass-line);
+  border-radius: 999px;
+  background: var(--glass);
+  -webkit-backdrop-filter: blur(14px);
+  backdrop-filter: blur(14px);
+  color: var(--ink-soft);
+  font-size: 0.8rem;
+  letter-spacing: 0.01em;
+}
+
+.hero-name {
+  margin: 0;
+  font-size: clamp(2.4rem, 7.5vw, 4.4rem);
+}
+
+.hero-role {
+  margin: 0.7rem 0 0;
+  font-family: var(--font-display);
+  font-size: clamp(1.05rem, 2.6vw, 1.45rem);
+  font-weight: 500;
+  color: var(--gold);
+  letter-spacing: -0.01em;
+}
+
+.hero-line {
+  margin: 1.25rem 0 0;
+  max-width: 34rem;
+  color: var(--ink-dim);
+  font-size: clamp(1rem, 2vw, 1.1rem);
+}
+
+.hero-links {
+  list-style: none;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.65rem;
+  margin: 2.1rem 0 0;
+  padding: 0;
+}
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.62rem 1.15rem;
+  border: 1px solid var(--glass-line);
+  border-radius: 11px;
+  background: var(--glass);
+  -webkit-backdrop-filter: blur(14px);
+  backdrop-filter: blur(14px);
+  color: var(--ink);
+  font-size: 0.9rem;
+  font-weight: 600;
+  text-decoration: none;
+  transition: border-color 0.2s ease, transform 0.2s ease, color 0.2s ease;
+}
+
+.btn:hover {
+  transform: translateY(-1px);
+  border-color: rgba(208, 164, 76, 0.5);
+  color: var(--gold-soft);
+}
+
+.btn--gold {
+  border-color: transparent;
+  background: linear-gradient(180deg, var(--gold-soft), var(--gold));
+  color: #1a1204;
+}
+
+.btn--gold:hover {
+  color: #1a1204;
+  filter: brightness(1.06);
+}
+
+/* ---------------------------------------------------------------
+   Skills keyboard
+
+   PERFORMANCE RULE: the frosted blur lives on .kb-deck only and never
+   changes. A press moves a transform and fades .kb-glow's opacity -
+   nothing re-triggers backdrop-filter. Same trick as .pf-glow.
+   --------------------------------------------------------------- */
+.kb {
+  position: relative;
+  padding: clamp(3rem, 8vw, 6rem) var(--shell) clamp(3.5rem, 9vw, 6.5rem);
+}
+
+.kb-intro {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 1.25rem;
+  flex-wrap: wrap;
+  max-width: 62rem;
+  margin: 0 auto clamp(2rem, 4vw, 3rem);
+}
+
+.kb-intro h2 {
+  margin: 0 0 0.5rem;
+  font-size: clamp(1.9rem, 4vw, 2.9rem);
+}
+
+.kb-intro p {
+  margin: 0;
+  max-width: 34rem;
+  color: var(--ink-soft);
+}
+
+.kb-mute {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 0.9rem;
+  border: 1px solid var(--glass-line);
+  border-radius: 999px;
+  background: var(--glass);
+  -webkit-backdrop-filter: blur(14px);
+  backdrop-filter: blur(14px);
+  color: var(--ink-soft);
+  font: inherit;
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: color 0.2s ease, border-color 0.2s ease;
+}
+
+.kb-mute:hover {
+  color: var(--gold-soft);
+  border-color: rgba(208, 164, 76, 0.45);
+}
+
+.kb-stage {
+  max-width: 62rem;
+  margin: 0 auto;
+  perspective: 1400px;
+}
+
+/* The one frosted surface. Set once, never re-triggered. */
+.kb-deck {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: clamp(0.4rem, 1vw, 0.6rem);
+  padding: clamp(0.85rem, 2.2vw, 1.5rem);
+  border: 1px solid var(--glass-line);
+  border-radius: 22px;
+  background: var(--glass);
+  -webkit-backdrop-filter: blur(20px);
+  backdrop-filter: blur(20px);
+  box-shadow: 0 34px 70px -34px rgba(0, 0, 0, 0.9), inset 0 1px 0 rgba(255, 255, 255, 0.06);
+  transform: rotateX(10deg) scale(0.96);
+  opacity: 0;
+  transition: transform 0.7s cubic-bezier(0.2, 0.9, 0.25, 1), opacity 0.6s ease;
+}
+
+.kb.is-assembled .kb-deck {
+  transform: rotateX(10deg) scale(1);
+  opacity: 1;
+}
+
+.kb-deck-lip {
+  position: absolute;
+  inset: auto 8% -7px 8%;
+  height: 8px;
+  border-radius: 0 0 14px 14px;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.05), rgba(0, 0, 0, 0.35));
+  pointer-events: none;
+}
+
+.kb-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: clamp(0.35rem, 0.9vw, 0.55rem);
+  padding-left: calc(var(--r) * 0.7rem); /* the stagger of a real board */
+}
+
+/* The key housing. The cap drops into this 5px well when pressed. */
+.kb-key {
+  position: relative;
+  flex: 1 1 5.4rem;
+  min-width: 4.4rem;
+  padding: 0 0 5px;
+  border: 0;
+  border-radius: 13px;
+  background: none;
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  opacity: 0;
+  transform: translate3d(0, -34px, 0) scale(0.82);
+  transition: opacity 0.42s ease, transform 0.55s cubic-bezier(0.18, 1.22, 0.32, 1);
+  transition-delay: calc(var(--i) * 22ms);
+}
+
+.kb.is-assembled .kb-key {
+  opacity: 1;
+  transform: none;
+}
+
+.kb-key::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: 13px;
+  background: #0a0c11;
+  box-shadow: inset 0 2px 5px rgba(0, 0, 0, 0.8);
+}
+
+/* Opaque cap - deliberately no backdrop-filter here. */
+.kb-cap {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.3rem;
+  width: 100%;
+  min-height: clamp(3rem, 5.8vw, 3.7rem);
+  padding: 0.45rem 0.4rem;
+  border-radius: 12px;
+  background: linear-gradient(180deg, #262a34 0%, #1b1f27 62%, #161a21 100%);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.09), inset 0 -1px 0 rgba(0, 0, 0, 0.5),
+    0 2px 5px -2px rgba(0, 0, 0, 0.7);
+  transition: transform 0.34s cubic-bezier(0.22, 1.55, 0.4, 1);
+}
+
+.kb-key.is-down .kb-cap {
+  transform: translateY(5px);
+  transition-duration: 0.045s;
+  transition-timing-function: ease-out;
+}
+
+/* The gold glow: its own cheap overlay layer, opacity only. */
+.kb-glow {
+  position: absolute;
+  inset: -1px;
+  border-radius: 13px;
+  pointer-events: none;
+  box-shadow: 0 0 0 1px rgba(208, 164, 76, 0.65), 0 0 22px -2px rgba(208, 164, 76, 0.55),
+    inset 0 0 16px -6px rgba(227, 199, 137, 0.7);
+  opacity: 0;
+  transition: opacity 0.22s ease;
+}
+
+.kb-key:hover .kb-glow {
+  opacity: 0.32;
+}
+
+.kb-key.is-active .kb-glow {
+  opacity: 0.6;
+}
+
+.kb-key.is-down .kb-glow {
+  opacity: 1;
+  transition-duration: 0.04s;
+}
+
+.kb-label {
+  font-family: var(--font-display);
+  font-size: clamp(0.66rem, 1.35vw, 0.82rem);
+  font-weight: 600;
+  line-height: 1.15;
+  text-align: center;
+  letter-spacing: -0.005em;
+  color: var(--ink);
+  overflow-wrap: anywhere;
+}
+
+.kb-key.is-active .kb-label {
+  color: var(--gold-soft);
+}
+
+/* Honesty dot: small, quiet, always visible. */
+.kb-dot {
+  position: absolute;
+  top: 7px;
+  right: 8px;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--gold);
+  box-shadow: 0 0 6px rgba(208, 164, 76, 0.8);
+}
+
+.kb-readout {
+  max-width: 46rem;
+  margin: clamp(2.2rem, 5vw, 3.4rem) auto 0;
+  min-height: 6.5rem;
+  padding: 1.15rem 1.35rem;
+  border: 1px solid var(--glass-line);
+  border-radius: 16px;
+  background: var(--glass);
+  -webkit-backdrop-filter: blur(18px);
+  backdrop-filter: blur(18px);
+}
+
+.kb-readout-head {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+  margin: 0 0 0.4rem;
+}
+
+.kb-readout-name {
+  font-family: var(--font-display);
+  font-size: 1.15rem;
+  font-weight: 600;
+  color: var(--gold-soft);
+}
+
+.kb-tag {
+  padding: 0.18rem 0.5rem;
+  border: 1px solid rgba(208, 164, 76, 0.35);
+  border-radius: 999px;
+  background: rgba(208, 164, 76, 0.12);
+  color: var(--gold-soft);
+  font-size: 0.7rem;
+  font-weight: 600;
+}
+
+.kb-readout-desc {
+  margin: 0;
+  color: var(--ink-dim);
+}
+
+.kb-readout-empty {
+  margin: 0;
+  color: var(--ink-soft);
+}
+
+/* ---------------------------------------------------------------
+   Footer
+   --------------------------------------------------------------- */
+.ft {
+  position: relative;
+  z-index: 1;
+  padding: clamp(3.5rem, 8vw, 6rem) var(--shell) 2rem;
+  border-top: 1px solid var(--glass-line);
+}
+
+.ft-inner {
+  display: flex;
+  flex-wrap: wrap;
+  gap: clamp(2rem, 6vw, 5rem);
+  justify-content: space-between;
+  max-width: 62rem;
+  margin: 0 auto;
+}
+
+.ft-lead {
+  max-width: 26rem;
+}
+
+.ft-lead h2 {
+  margin: 0 0 0.6rem;
+  font-size: clamp(1.7rem, 3.6vw, 2.4rem);
+}
+
+.ft-lead p {
+  margin: 0;
+  color: var(--ink-soft);
+}
+
+.ft-links {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 0.9rem;
+}
+
+.ft-links li {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.ft-key {
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+}
+
+.ft-links a {
+  color: var(--ink);
+  font-size: 0.97rem;
+  text-decoration: none;
+  border-bottom: 1px solid rgba(208, 164, 76, 0.35);
+  padding-bottom: 1px;
+  width: fit-content;
+  transition: color 0.2s ease, border-color 0.2s ease;
+  overflow-wrap: anywhere;
+}
+
+.ft-links a:hover {
+  color: var(--gold-soft);
+  border-color: var(--gold);
+}
+
+.ft-base {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 1.25rem;
+  justify-content: space-between;
+  max-width: 62rem;
+  margin: clamp(2.5rem, 6vw, 4rem) auto 0;
+  padding-top: 1.25rem;
+  border-top: 1px solid var(--glass-line);
+  color: var(--ink-soft);
+  font-size: 0.82rem;
+}
+
+/* ---------------------------------------------------------------
+   Responsive
+   --------------------------------------------------------------- */
+@media (max-width: 900px) {
+  .kb-row {
+    padding-left: 0;
+  }
+
+  .kb-deck {
+    transform: rotateX(6deg) scale(0.96);
+  }
+
+  .kb.is-assembled .kb-deck {
+    transform: rotateX(6deg) scale(1);
+  }
+}
+
+@media (max-width: 640px) {
+  .kb-deck {
+    transform: none;
+  }
+
+  .kb.is-assembled .kb-deck {
+    transform: none;
+  }
+
+  .kb-key {
+    flex: 1 1 4.6rem;
+    min-width: 4rem;
+  }
+
+  .kb-intro {
+    align-items: flex-start;
+  }
+
+  .app-blob {
+    filter: blur(70px);
+    opacity: 0.42;
+  }
+}
+
+/* ---------------------------------------------------------------
+   Reduce motion - the assemble and the bounce are the first to go.
+   --------------------------------------------------------------- */
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+
+  .app-blob {
+    animation: none;
+  }
+
+  .kb-deck,
+  .kb-key {
+    opacity: 1;
+    transform: none;
+    transition: none;
+    transition-delay: 0s;
+  }
+
+  .kb.is-assembled .kb-deck {
+    transform: none;
+  }
+
+  .kb-cap {
+    transition: none;
+  }
+
+  .kb-key.is-down .kb-cap {
+    transform: translateY(3px);
+  }
+
+  .btn:hover {
+    transform: none;
+  }
+
+  .kb-glow {
+    transition: opacity 0.1s linear;
+  }
+}
