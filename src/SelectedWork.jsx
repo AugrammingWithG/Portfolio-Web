@@ -121,7 +121,7 @@ export default function SelectedWork() {
             <li key={p.id}>
               <button
                 type="button"
-                className={`pw-label ${p.soon ? "is-soon" : ""}`}
+                className="pw-label"
                 ref={(el) => {
                   labelRefs.current[i] = el;
                 }}

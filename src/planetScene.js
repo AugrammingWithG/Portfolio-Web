@@ -12,7 +12,7 @@
      * it lives in a section instead of owning the viewport, so everything
        measures against the canvas rather than innerWidth/innerHeight
      * the lights are converted for three r185 — see the note below
-     * arrive(), the hand-off from the hero satellite's flight
+     * arrive(), the system coming forward as the section is reached
      * reduced motion opens a project with a straight fade
 
    THE LIGHTS. The prototype is three r128; this project is r185, and point
@@ -37,13 +37,45 @@ const easeInOut = (t) => (t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) 
    the case study panel on the right. The prototype's value. */
 const STAGE = [-2.5, 0.2, 2.0];
 
-/* Where the hero satellite leaves its last planet — satelliteScene.js flies
-   it to (3.6, -0.3, -3.5) at 1.25 scale and fades its canvas out there. The
-   first planet here starts on that exact mark and eases home, so the arrival
-   reads as one trip rather than two sections that happen to both have
-   planets in them. */
-const HANDOFF = [3.6, -0.3, -3.5];
-const HANDOFF_SCALE = 1.25;
+/* How big it is once it gets there. The prototype multiplied every planet by
+   a flat 1.7, which was fine while they were all about the same size in world
+   units. They are not any more: planets.js sits them at different depths and
+   compensates with world size so they read the SAME on screen, which turns a
+   flat multiplier into a hierarchy — the deepest project would open half again
+   as big as the nearest one, in the one view that shows a project on its own.
+   So the stage is a fixed radius and each planet's scale is whatever reaches
+   it. 1.9 is where the old numbers averaged out, so the framing is unchanged.
+
+   Read this before touching planets.js's DISC or its depths.               */
+const STAGE_R = 1.9;
+const stageScale = (proj) => STAGE_R / proj.size;
+
+/* THERE IS NO HAND-OFF POINT, and there never was one. This file used to
+   claim the satellite "flies to (3.6, -0.3, -3.5) and fades its canvas out
+   there", and started the first planet on that mark so the two sections would
+   read as one trip. Both halves of that were wrong:
+
+     * The satellite does not end there. satelliteScene.js drives it to
+       z = -seg2 * 34 while pulling it back to the middle, and dissolves it
+       outright — satFade reaches 0 at seg2 0.84, well before the flight ends.
+       It vanishes deep and centred, on purpose: "what recedes into the nebula
+       is the nebula, not a dark shape laid over it".
+     * Even had it ended somewhere, the coordinate would not transfer. That
+       scene is fov 42 with a lookAt that MOVES down the flight; this one is
+       fov 46 with a fixed one. The same world point is not the same pixel.
+
+   So the first planet was sliding in from a spot that corresponded to nothing
+   on screen, on its own, while the other five just faded up — which is
+   exactly what it looked like: Gourmet Getaway moving out of nowhere.
+
+   What replaces it is in arrive() below: the system comes forward out of the
+   same depth the satellite disappeared into, all six together. That is a
+   continuation of the flight which is actually true of the flight.
+
+   If a real hand-off is ever wanted it has to be done in screen space — end
+   the satellite visibly, project that point through ITS camera, unproject it
+   through this one. A shared world constant cannot do it.                  */
+const ARRIVE_BACK = 7;
 
 export async function createScene(canvas, planets, opts = {}) {
   const THREE = await import("three");
@@ -133,25 +165,29 @@ export async function createScene(canvas, planets, opts = {}) {
 
   planets.forEach((proj, i) => {
     const grp = new THREE.Group();
-    const soon = proj.soon;
-    const base = soon ? 0x232529 : 0x2b2e34;
 
+    /* NOTHING BELOW BRANCHES ON proj.soon, and that is the point. Incoming
+       work used to get a darker globe, a coarser one, a dead band, a dimmer
+       light and no flag — five separate ways of saying "lesser" about a
+       project whose only difference is that it has not shipped yet. That is
+       carried by the SOON tag on the label and by the panel's copy now. The
+       globe is a globe. */
     const globeMat = new THREE.MeshStandardMaterial({
-      color: base,
+      color: 0x2b2e34,
       roughness: 0.85,
       metalness: 0.2,
       flatShading: true,
       transparent: true,
     });
-    const globe = new THREE.Mesh(new THREE.IcosahedronGeometry(proj.size, soon ? 0 : 1), globeMat);
+    const globe = new THREE.Mesh(new THREE.IcosahedronGeometry(proj.size, 1), globeMat);
     grp.add(globe);
 
     const bandMat = new THREE.MeshStandardMaterial({
-      color: soon ? 0x4a4636 : GOLD,
+      color: GOLD,
       roughness: 0.5,
       metalness: 0.6,
       emissive: GOLD,
-      emissiveIntensity: soon ? 0.04 : 0.16,
+      emissiveIntensity: 0.16,
       transparent: true,
     });
     const band = new THREE.Mesh(new THREE.TorusGeometry(proj.size * 1.08, 0.045, 8, 44), bandMat);
@@ -159,34 +195,31 @@ export async function createScene(canvas, planets, opts = {}) {
     band.rotation.y = i * 0.5;
     grp.add(band);
 
-    // Incoming work has no flag planted on it yet. That is the point.
-    if (!soon) {
-      const pole = new THREE.Mesh(
-        new THREE.CylinderGeometry(0.025, 0.025, 0.7, 6),
-        new THREE.MeshStandardMaterial({
-          color: GOLD,
-          metalness: 0.6,
-          roughness: 0.4,
-          transparent: true,
-        })
-      );
-      pole.position.set(proj.size * 0.15, proj.size + 0.35, 0);
-      grp.add(pole);
+    const pole = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.025, 0.025, 0.7, 6),
+      new THREE.MeshStandardMaterial({
+        color: GOLD,
+        metalness: 0.6,
+        roughness: 0.4,
+        transparent: true,
+      })
+    );
+    pole.position.set(proj.size * 0.15, proj.size + 0.35, 0);
+    grp.add(pole);
 
-      const flag = new THREE.Mesh(
-        new THREE.BoxGeometry(0.38, 0.24, 0.02),
-        new THREE.MeshStandardMaterial({
-          color: GOLD_HI,
-          metalness: 0.6,
-          roughness: 0.35,
-          emissive: GOLD,
-          emissiveIntensity: 0.25,
-          transparent: true,
-        })
-      );
-      flag.position.set(proj.size * 0.15 + 0.2, proj.size + 0.55, 0);
-      grp.add(flag);
-    }
+    const flag = new THREE.Mesh(
+      new THREE.BoxGeometry(0.38, 0.24, 0.02),
+      new THREE.MeshStandardMaterial({
+        color: GOLD_HI,
+        metalness: 0.6,
+        roughness: 0.35,
+        emissive: GOLD,
+        emissiveIntensity: 0.25,
+        transparent: true,
+      })
+    );
+    flag.position.set(proj.size * 0.15 + 0.2, proj.size + 0.55, 0);
+    grp.add(flag);
 
     const logoSlot = new THREE.Mesh(
       logoGeo,
@@ -203,7 +236,7 @@ export async function createScene(canvas, planets, opts = {}) {
       });
     }
 
-    grp.add(new THREE.PointLight(soon ? 0x2f7d8c : GOLD, (soon ? 0.25 : 0.6) * R128, 6, 1));
+    grp.add(new THREE.PointLight(GOLD, 0.6 * R128, 6, 1));
 
     grp.position.copy(V(proj.home));
     grp.userData = {
@@ -211,7 +244,12 @@ export async function createScene(canvas, planets, opts = {}) {
       i,
       globe,
       logoSlot,
+      /* `home` is where the planet rests and is what the return tween and
+         arrive() aim at. `baseHome` is the slot as authored, kept apart from
+         it because fitWidth() rewrites home.x on every resize and would
+         otherwise be narrowing an already-narrowed ring, frame after frame. */
       home: V(proj.home).clone(),
+      baseHome: V(proj.home).clone(),
       spin: 0.002 + proj.seed * 0.004,
       materials: [],
     };
@@ -254,6 +292,9 @@ export async function createScene(canvas, planets, opts = {}) {
   let yaw = 0;
   let pitch = 0;
   let arrived = false;
+  /* True only while the arrival is playing. fitWidth() parks resting planets
+     on their home x on every resize, which mid-flight would teleport one. */
+  let arriving = false;
   let labels = [];
   // Every setTimeout the scene starts, so dispose() can cancel them and a
   // StrictMode remount cannot leave a dead tween firing into a torn-down scene.
@@ -289,7 +330,7 @@ export async function createScene(canvas, planets, opts = {}) {
         if (g !== grp) setOpacity(g, 0);
       });
       grp.position.copy(stageV);
-      grp.scale.setScalar(1.7);
+      grp.scale.setScalar(stageScale(grp.userData.proj));
       emit({ index, contentIndex: index, panelDim: false });
       setState("detail");
       return;
@@ -333,7 +374,7 @@ export async function createScene(canvas, planets, opts = {}) {
       easeInOut,
       (p) => {
         grp.position.lerpVectors(s, stageV, p);
-        grp.scale.setScalar(ss + (1.7 - ss) * p);
+        grp.scale.setScalar(ss + (stageScale(grp.userData.proj) - ss) * p);
       },
       () => {
         emit({ index, contentIndex: index, panelDim: false });
@@ -356,7 +397,7 @@ export async function createScene(canvas, planets, opts = {}) {
       setOpacity(cur, 0);
       setOpacity(target, 1);
       target.position.copy(stageV);
-      target.scale.setScalar(1.7);
+      target.scale.setScalar(stageScale(target.userData.proj));
       selected = target;
       navBusy = false;
       emit({ index: ti, contentIndex: ti, panelDim: false });
@@ -408,7 +449,7 @@ export async function createScene(canvas, planets, opts = {}) {
       easeInOut,
       (p) => {
         target.position.lerpVectors(start, stageV, p);
-        target.scale.setScalar(1.7 * p);
+        target.scale.setScalar(stageScale(target.userData.proj) * p);
       },
       () => {
         selected = target;
@@ -447,30 +488,62 @@ export async function createScene(canvas, planets, opts = {}) {
     timers.push(t);
   }
 
-  /* ---- the hand-off from the hero flight --------------------------------- *
-     Runs once, when the section first comes into view. The first planet
-     starts on the mark the satellite left it at and eases home while the rest
-     of the system fades up behind it — so the trip that began in the hero
-     ends here instead of restarting.                                        */
+  /* ---- the arrival ------------------------------------------------------- *
+     Runs once, when enough of the section is on screen to watch it happen —
+     the ratio gate in usePlanetSystem.js is the other half of this.
+
+     Every planet starts ARRIVE_BACK behind its own home and eases forward on
+     to it, fading up as it comes. Straight along z: the x and y it lands on
+     are the x and y it starts from, so nothing drifts sideways and no planet
+     crosses another's path on the way in.
+
+     The stagger is per planet, taken from the seed planets.js already carries,
+     so it is the same on every load rather than reshuffling. It is what keeps
+     six objects from moving like one sheet — but every one of them is doing
+     the SAME thing, a beat apart. Not one of them is singled out. Singling one
+     out was the bug.                                                        */
   function arrive() {
     if (arrived) return;
     arrived = true;
     if (reduce) return;
 
-    const first = groups[0];
-    if (!first) return;
-
-    const from = V(HANDOFF);
-    const home = first.userData.home.clone();
-    first.position.copy(from);
-    first.scale.setScalar(HANDOFF_SCALE);
-    for (let i = 1; i < groups.length; i += 1) setOpacity(groups[i], 0);
-
-    tween(1100, easeInOut, (p) => {
-      first.position.lerpVectors(from, home, p);
-      first.scale.setScalar(HANDOFF_SCALE + (1 - HANDOFF_SCALE) * p);
-      for (let i = 1; i < groups.length; i += 1) setOpacity(groups[i], p);
+    arriving = true;
+    const legs = groups.map((g) => {
+      const home = g.userData.home.clone();
+      const from = home.clone();
+      from.z -= ARRIVE_BACK;
+      g.position.copy(from);
+      setOpacity(g, 0);
+      return { g, from, home, lead: g.userData.proj.seed * 0.3 };
     });
+
+    tween(
+      1200,
+      easeOut,
+      (p) => {
+        /* Open a project inside the first 1.2s and select() owns these
+           planets now — it is fading five of them out and flying the sixth to
+           the stage. Keep writing position and opacity underneath it and the
+           two tweens fight. The arrival simply stands down. */
+        if (state !== "system") return;
+        legs.forEach(({ g, from, home, lead }) => {
+          const t = Math.max(0, Math.min(1, (p - lead) / (1 - lead)));
+          g.position.lerpVectors(from, home, t);
+          setOpacity(g, t);
+        });
+      },
+      () => {
+        arriving = false;
+        if (state !== "system") return; // stood down; whatever took over owns them
+        /* Land exactly, then let fitWidth have the last word on x — a resize
+           during the flight moves home out from under the tween. */
+        legs.forEach(({ g, home }) => {
+          g.position.copy(home);
+          setOpacity(g, 1);
+        });
+        fitWidth();
+      }
+    );
   }
 
   /* ---- picking and dragging ---------------------------------------------- */
@@ -494,7 +567,7 @@ export async function createScene(canvas, planets, opts = {}) {
     if (next === hover) return false;
     if (hover) hover.userData.label && hover.userData.label.classList.remove("is-hot");
     hover = next;
-    if (hover && !hover.userData.proj.soon && hover.userData.label) {
+    if (hover && hover.userData.label) {
       hover.userData.label.classList.add("is-hot");
     }
     return true;
@@ -528,6 +601,49 @@ export async function createScene(canvas, planets, opts = {}) {
   /* ---- frame ------------------------------------------------------------- */
   const pv = new THREE.Vector3();
 
+  /* ---- how wide the ring gets to be -------------------------------------- *
+     planets.js draws the ring at the width a normal window can hold. A frame
+     narrower than that would push the outer planets off the sides, so the ring
+     is pulled in horizontally to fit instead — never pushed out past what was
+     authored, so a wide monitor gets the composition as drawn and a cramped
+     window gets the same composition, narrower.
+
+     Only x moves. Heights, depths and sizes are untouched, so the ring keeps
+     its proportions and nothing has to be re-measured for a new window.
+
+     MIN_FIT is where that stops. Squeeze the sides in past this and the ring
+     starts folding through itself — the two o'clock planet arriving on top of
+     the ten o'clock one — which is worse than running off the edge. Below it
+     the sides clip, which is what a portrait window did before any of this. */
+  const HALF_FOV = Math.tan(((46 / 2) * Math.PI) / 180); // camera's, see above
+  const CAM_HOME_Z = 6; // the camera's resting distance, before yaw and pitch
+  const EDGE = 0.025; // air kept outside the outermost globe, in frame heights
+  const MIN_FIT = 0.7;
+
+  function fitWidth() {
+    const halfW = 0.5 * camera.aspect; // frame half-width, in frame heights
+    let fit = 1;
+
+    groups.forEach((g) => {
+      const b = g.userData.baseHome;
+      const span = 2 * HALF_FOV * (CAM_HOME_Z - b.z); // frame height there
+      const out = Math.abs(b.x) / span; // how far out it sits
+      if (out < 1e-6) return; // dead centre, nothing to pull in
+      const rr = (g.userData.proj.size * 1.13) / span; // globe + its band
+      fit = Math.min(fit, (halfW - EDGE - rr) / out);
+    });
+
+    fit = Math.max(MIN_FIT, Math.min(1, fit));
+
+    groups.forEach((g) => {
+      g.userData.home.x = g.userData.baseHome.x * fit;
+      /* Only move what is sitting still. A planet mid-warp or on the stage is
+         somewhere its tween put it, and its tween already holds the home it
+         was aiming at — dragging it sideways here would tear the animation. */
+      if (state === "system" && !arriving && g !== selected) g.position.x = g.userData.home.x;
+    });
+  }
+
   function resize() {
     w = Math.max(1, canvas.clientWidth);
     h = Math.max(1, canvas.clientHeight);
@@ -535,6 +651,7 @@ export async function createScene(canvas, planets, opts = {}) {
     renderer.setSize(w, h, false);
     camera.aspect = w / h;
     camera.updateProjectionMatrix();
+    fitWidth();
   }
 
   function frame() {

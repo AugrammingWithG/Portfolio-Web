@@ -126,8 +126,11 @@
   color: var(--gold-soft);
 }
 
-.pw-label.is-soon { color: var(--ink-3); }
-.pw-label.is-soon:hover { color: var(--ink-soft); }
+/* Incoming work's label used to be printed a step dimmer than the rest, and
+   to refuse the gold on hover. It reads at the same weight as every other name
+   now — the SOON chip beside it is what says it has not shipped, and saying it
+   twice was the section deciding which work mattered. The .is-soon class went
+   with the rules; `soon` still drives the chip and the panel's copy. */
 
 /* ---- no WebGL ------------------------------------------------------------ *
    If the scene never loads there is nothing to position the labels over, and

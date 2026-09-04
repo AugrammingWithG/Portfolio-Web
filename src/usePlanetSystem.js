@@ -44,6 +44,11 @@ const navFallback = (v, d) => {
 };
 const closeFallback = (v) => ({ ...v, state: "system", index: -1 });
 
+/* How much of the section has to be on screen before the arrival is worth
+   playing. At 0 it fired the moment one pixel crossed the viewport edge, so
+   it ran while the section was still a sliver at the bottom of the screen. */
+const ARRIVE_AT = 0.4;
+
 export default function usePlanetSystem(refs) {
   const { canvasRef, sectionRef, flashRef, panelRef, labelRefs } = refs;
 
@@ -83,6 +88,8 @@ export default function usePlanetSystem(refs) {
     let raf = null;
     let alive = true;
     let onScreen = false;
+    // Whether the section has ever been on screen enough to earn the arrival.
+    let seen = false;
     let wheelLock = null;
 
     let dragging = false;
@@ -92,6 +99,14 @@ export default function usePlanetSystem(refs) {
 
     const emit = (patch) => {
       if (alive) setView((v) => ({ ...v, ...patch }));
+    };
+
+    /* The arrival needs the scene built AND the section actually looked at,
+       and those finish in either order — the scene arrives by dynamic import,
+       the section by scrolling. Both sides call this; scene.arrive() only
+       ever runs once, so whichever is second is the one that starts it. */
+    const tryArrive = () => {
+      if (scene && seen) scene.arrive();
     };
 
     function loop() {
@@ -250,6 +265,8 @@ export default function usePlanetSystem(refs) {
         api.current = { ...scene, openAt };
         setReady(true);
         start();
+        // The section may already have been in view before this import landed.
+        tryArrive();
       } catch (err) {
         // No WebGL, or the chunk failed. The section still lists every
         // project as text — see the labels in SelectedWork.jsx.
@@ -260,16 +277,26 @@ export default function usePlanetSystem(refs) {
 
     /* Load-and-run gate. The scene is only built once the section is close,
        and only runs while it is on screen. */
+    /* Two thresholds, two jobs. 0 starts and stops the render loop, which
+       wants to be running the moment any part of the section can be seen.
+       ARRIVE_AT gates the arrival, which wants to be watched.
+
+       The old code did the second job at the first threshold and skipped it
+       whenever the scene had not finished importing yet — nothing came back
+       to run it once the import landed, so the arrival could be missed
+       entirely or played off the bottom of the screen. */
     const vis = new IntersectionObserver(
       ([entry]) => {
         onScreen = entry.isIntersecting;
         if (onScreen) {
           start();
-          // The hand-off from the hero flight, once, on first sight.
-          if (scene) scene.arrive();
+          if (entry.intersectionRatio >= ARRIVE_AT) {
+            seen = true;
+            tryArrive();
+          }
         } else stop();
       },
-      { threshold: 0 }
+      { threshold: [0, ARRIVE_AT] }
     );
     vis.observe(section);
 
