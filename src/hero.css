@@ -1,0 +1,396 @@
+/* ==========================================================================
+   HERO — ported from the standalone hero.html, look and animations unchanged.
+
+   Two notes on the port, both forced by the fact that hero.html sets
+   `body{overflow:hidden}` and therefore can never scroll:
+
+   1. Everything it positions `fixed` (aurora, flow canvas, top bar, scroll
+      line) is `absolute` here, scoped to the hero section. In a page that
+      cannot scroll the two are indistinguishable; in a page that can, `fixed`
+      would drag the aurora behind Skills, Selected Work and Contact.
+
+   2. hero.html paints its own near-black body. This site has a brass wash
+      running the length of the page, so .hero-fx carries that near-black as
+      its own ground and masks itself out over the last stretch of the section
+      — the aurora fades into the site's ground instead of ending on a line.
+      The handoff value the seam depends on is in styles.css; see the handoff
+      rule in hud.css.
+
+   Only two tokens are renamed from the original, because they collide with the
+   site's own: --bg -> --h-bg and --glass -> --h-glass. Everything else keeps
+   hero.html's name so the two files stay easy to diff.
+   ========================================================================== */
+
+:root {
+  --h-bg: #0a0b0e;
+  --bone: #e8e5dc;
+  /* Lifted from hero.html's #9096a0. Against the aurora at its brightest the
+     original measured 4.29-4.61 on the blurb — under the 4.5 AA line on most
+     frames, and the star field only added light. This holds above it through
+     the whole animation cycle. */
+  --steel: #a3a8b1;
+  --line: rgba(255, 255, 255, 0.09);
+  --brass: #c9a24b;
+  --brass-lt: #e7c063;
+  --brass-dim: #8f7534;
+  --h-glass: rgba(255, 255, 255, 0.06);
+  --glass-edge: rgba(255, 255, 255, 0.14);
+  /* Space Grotesk, not hero.html's Syne. It is the face the rest of the site
+     already sets its headings in, it was drawn for a space brief (it descends
+     from Space Mono), and it is materially narrower than Syne ExtraBold -
+     which is what stopped the name breaking mid-word. */
+  --f-display: "Space Grotesk", ui-sans-serif, system-ui, "Segoe UI", sans-serif;
+  --f-body: "Inter", sans-serif;
+  --f-mono: "JetBrains Mono", monospace;
+  --pad: clamp(22px, 5vw, 64px);
+  --ease: cubic-bezier(0.16, 1, 0.3, 1);
+  --mx: 0;
+  --my: 0;
+}
+
+.hero {
+  padding: 0; /* hero.html manages its own gutters through --pad */
+}
+.hero ::selection { background: var(--brass); color: #000; }
+
+/* ---- the ground the aurora sits on --------------------------------------- *
+   Masked out at the bottom so the section ends on the site's own ground, at
+   exactly the value Skills opens with.                                      */
+.hero-fx {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  overflow: hidden;
+  pointer-events: none;
+  background: var(--h-bg);
+  -webkit-mask-image: linear-gradient(180deg, #000 0%, #000 74%, transparent 100%);
+  mask-image: linear-gradient(180deg, #000 0%, #000 74%, transparent 100%);
+}
+
+/* living aurora */
+.aurora {
+  position: absolute;
+  inset: -15%;
+  transform: translate(calc(var(--mx) * -14px), calc(var(--my) * -14px));
+}
+.aurora i {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(100px);
+  mix-blend-mode: screen;
+}
+.aurora .g1 { width: 60vw; height: 60vw; background: #e2ad48; top: -18%; left: -14%; opacity: 0.6; animation: au1 20s ease-in-out infinite alternate; }
+.aurora .g2 { width: 66vw; height: 66vw; background: #2f6f88; bottom: -24%; right: -16%; opacity: 0.58; animation: au2 26s ease-in-out infinite alternate; }
+.aurora .g3 { width: 44vw; height: 44vw; background: #3f8a7c; top: 36%; left: 40%; opacity: 0.38; animation: au3 22s ease-in-out infinite alternate; }
+.aurora .g4 { width: 30vw; height: 30vw; background: #caa14b; top: 8%; left: 46%; opacity: 0.32; animation: au1 18s ease-in-out infinite alternate-reverse; }
+@keyframes au1 { from { transform: translate(0, 0) scale(1); } to { transform: translate(8%, 10%) scale(1.18); } }
+@keyframes au2 { from { transform: translate(0, 0) scale(1.05); } to { transform: translate(-9%, -7%) scale(1.22); } }
+@keyframes au3 { from { transform: translate(0, 0); } to { transform: translate(-12%, 8%) scale(1.15); } }
+
+/* ---- the galactic haze -------------------------------------------------- *
+   The luminance the stars sit in. Canvas draws the stars; this draws the milk.
+   Tilted to the same -0.42rad the star band uses in useFlowField.js — change
+   one and the other has to follow, or the glow drifts off its own stars.
+   Screen-blended, so it adds light rather than laying a film over the aurora. */
+.milkyway {
+  position: absolute;
+  inset: -25%;
+  mix-blend-mode: screen;
+  pointer-events: none;
+  transform: translate(calc(var(--mx) * -7px), calc(var(--my) * -7px)) rotate(-24deg);
+  background:
+    radial-gradient(ellipse 44% 13% at 50% 47%, rgba(255, 238, 205, 0.085), transparent 72%),
+    radial-gradient(ellipse 70% 24% at 50% 50%, rgba(216, 226, 255, 0.062), transparent 76%),
+    radial-gradient(ellipse 96% 40% at 50% 50%, rgba(150, 180, 235, 0.038), transparent 82%);
+}
+
+/* width/height are explicit on purpose: <canvas> is a replaced element, so
+   inset:0 alone leaves it at its intrinsic 300x150 and the current would draw
+   into a stamp in the corner. hero.html hid this by sizing the element from
+   JS; doing it in CSS keeps layout the single source of truth. */
+.hero-flow {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+
+/* Rails. .app-wash carries these for every other section, but .hero-fx paints
+   an opaque ground over the top of it, so the hero lost them — and the top bar
+   sits in the brightest brass on the page, where it measured 2.16:1. Painted
+   above the aurora and the current because ::after comes after both. */
+.hero-fx::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(
+    180deg,
+    rgba(10, 7, 3, 0.58) 0%,
+    rgba(10, 7, 3, 0.24) 9%,
+    rgba(10, 7, 3, 0) 18%,
+    rgba(10, 7, 3, 0) 82%,
+    rgba(10, 7, 3, 0.3) 93%,
+    rgba(10, 7, 3, 0.5) 100%
+  );
+}
+
+/* ---- global chrome, rendered outside the hero ----------------------------- *
+   A cursor that vanished once you scrolled past the hero would read as a bug,
+   so these two live at the app level and cover the whole page.              */
+.fx-grain {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  pointer-events: none;
+  opacity: 0.05;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+.fx-cursor {
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index: 60;
+  pointer-events: none;
+  mix-blend-mode: difference;
+  transition: transform 0.1s var(--ease);
+}
+.fx-cursor .ring {
+  width: 32px;
+  height: 32px;
+  border: 1px solid var(--bone);
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+}
+.fx-cursor.grow .ring { width: 58px; height: 58px; border-color: var(--brass); }
+@media (hover: none) { .fx-cursor { display: none; } }
+
+/* ---- top bar ------------------------------------------------------------- */
+.hero-top {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  z-index: 10;
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 1rem 2rem;
+  flex-wrap: wrap;
+  padding: 26px var(--pad);
+  font-family: var(--f-mono);
+  font-size: 12px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+}
+.hero-mark { margin: 0; color: var(--steel); }
+.hero-mark .sector-sep { opacity: 0.4; padding: 0 0.5em; }
+
+.hero-nav ul {
+  display: flex;
+  gap: clamp(1.1rem, 2.6vw, 2.4rem);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.hero-nav a {
+  color: var(--steel);
+  text-decoration: none;
+  padding-bottom: 3px;
+  border-bottom: 1px solid transparent;
+  transition: color 0.3s var(--ease), border-color 0.3s var(--ease);
+}
+.hero-nav a:hover,
+.hero-nav a:focus-visible { color: var(--brass); border-bottom-color: var(--brass); }
+
+/* ---- the grid ------------------------------------------------------------ */
+.hero-grid {
+  position: relative;
+  z-index: 5;
+  flex: 1;
+  min-height: 100svh;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.05fr);
+  align-items: center;
+  gap: clamp(1.5rem, 4vw, 3.5rem);
+  padding: 0 var(--pad);
+  max-width: 1500px;
+  margin: 0 auto;
+  width: 100%;
+}
+.hero-grid > * { min-width: 0; }
+.hero-left { max-width: 40rem; min-width: 0; }
+
+.reveal { overflow: hidden; display: block; }
+.reveal > * { display: block; transform: translateY(112%); transition: transform 1s var(--ease); }
+.is-loaded .reveal > * { transform: none; }
+
+/* ---- type: the role leads, the name follows ------------------------------ *
+   The sketch puts the job title above the name and much larger. The <h1> is
+   still the name — it is what the page is about, and visual size is not the
+   same thing as heading level.                                              */
+.hero-role {
+  margin: 0;
+  font-family: var(--f-display);
+  font-weight: 700;
+  font-size: clamp(2.1rem, 5.4vw, 4.6rem);
+  line-height: 1.02;
+  letter-spacing: -0.03em;
+  background: linear-gradient(
+    100deg,
+    var(--brass) 0%,
+    var(--brass-lt) 30%,
+    #fff2cf 50%,
+    var(--brass-lt) 70%,
+    var(--brass) 100%
+  );
+  background-size: 200% auto;
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  animation: shine 6s linear infinite;
+  opacity: 0;
+  transform: translateY(14px);
+  transition: opacity 0.9s var(--ease), transform 0.9s var(--ease);
+}
+.is-loaded .hero-role { opacity: 1; transform: none; }
+@keyframes shine { to { background-position: 200% center; } }
+
+.hero-name {
+  margin: clamp(0.9rem, 2vw, 1.4rem) 0 0;
+  font-family: var(--f-display);
+  font-weight: 600;
+  font-size: clamp(1.05rem, 2.1vw, 1.7rem);
+  line-height: 1.2;
+  letter-spacing: -0.01em;
+  color: var(--bone);
+}
+
+.hero-blurb {
+  margin: clamp(1.1rem, 2.4vw, 1.7rem) 0 0;
+  max-width: 44ch;
+  color: var(--steel);
+  font-size: clamp(0.95rem, 1.15vw, 1.05rem);
+  line-height: 1.65;
+  opacity: 0;
+  transition: opacity 1s var(--ease) 0.35s;
+}
+.is-loaded .hero-blurb { opacity: 1; }
+
+.hero-blurb-mark {
+  display: block;
+  margin-bottom: 0.5rem;
+  font-family: var(--f-mono);
+  font-size: 0.68rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+}
+
+/* ---- contact links ------------------------------------------------------- *
+   Plain links in a row, as sketched, rather than the button cluster.        */
+.hero-links {
+  display: flex;
+  gap: clamp(1.1rem, 2.6vw, 2.2rem);
+  margin: clamp(1.8rem, 4vw, 2.6rem) 0 0;
+  padding: 0;
+  list-style: none;
+  flex-wrap: wrap;
+  opacity: 0;
+  transform: translateY(16px);
+  transition: 0.9s var(--ease) 0.5s;
+}
+.is-loaded .hero-links { opacity: 1; transform: none; }
+
+.hero-links a {
+  display: inline-block;
+  font-family: var(--f-mono);
+  font-size: 0.74rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--bone);
+  text-decoration: none;
+  padding-bottom: 5px;
+  border-bottom: 1px solid rgba(201, 162, 75, 0.45);
+  transition: color 0.3s var(--ease), border-color 0.3s var(--ease);
+}
+.hero-links a:hover,
+.hero-links a:focus-visible { color: var(--brass); border-bottom-color: var(--brass); }
+
+/* ---- the board ----------------------------------------------------------- */
+.hero-board {
+  position: relative;
+  margin: 0;
+  justify-self: stretch;
+  align-self: center;
+  display: flex;
+  flex-direction: column;
+  opacity: 0;
+  transform: translateY(24px);
+  transition: 0.9s var(--ease) 0.45s;
+}
+.is-loaded .hero-board { opacity: 1; transform: none; }
+
+.hero-board-canvas {
+  display: block;
+  width: 100%;
+  height: clamp(280px, 46vh, 520px);
+  opacity: 0;
+  transition: opacity 0.9s ease;
+}
+.hero-board-canvas.is-ready { opacity: 1; }
+
+.hero-board-label {
+  display: flex;
+  align-items: baseline;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  margin-top: clamp(0.6rem, 1.6vw, 1rem);
+  padding-top: 0.7rem;
+  border-top: 1px solid var(--line);
+  font-family: var(--f-mono);
+  font-size: 0.64rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+.hero-board-label .k { color: var(--bone); }
+/* Two tiers up from --ink-3. This line lands over the teal end of the wash,
+   the darkest ground in the hero: --ink-3 measured 2.54:1 there and --steel
+   only reached 4.33. Still a clear step below .k, which is full bone. */
+.hero-board-label .v { color: var(--ink-dim); }
+
+@media (max-width: 900px) {
+  .hero-grid {
+    grid-template-columns: 1fr;
+    padding-top: 132px;
+    padding-bottom: 80px;
+    gap: clamp(2rem, 6vw, 3rem);
+  }
+  .hero-board-canvas { height: clamp(230px, 34vh, 340px); }
+  .hero-top { gap: 0.6rem 1.5rem; }
+  .hero-nav ul { gap: 1.1rem; }
+}
+
+/* Carried over from hero.html unchanged. */
+@media (prefers-reduced-motion: reduce) {
+  /* Written as .aurora .gN, not hero.html's .aurora i. The blobs are styled
+     through .aurora .g1 etc, so a type selector loses on specificity and the
+     aurora kept animating - the rule was there in the original but never took
+     effect. Same intent, now actually applied. */
+  .aurora .g1,
+  .aurora .g2,
+  .aurora .g3,
+  .aurora .g4,
+  .hero-role { animation: none; }
+  .reveal > *,
+  .hero-role,
+  .hero-blurb,
+  .hero-links,
+  .hero-board {
+    opacity: 1;
+    transform: none;
+    transition: none;
+  }
+}

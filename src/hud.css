@@ -1,0 +1,167 @@
+/* ==========================================================================
+   HUD SHELL — the framing every section of the site shares.
+
+   This started as the Selected Work sector and is now the whole site's
+   language: a dark ground, hairline corner brackets, a monospace header
+   (`// SECTION` plus a meta line), and a hint pinned to the bottom-left.
+   Gold/brass glass sits on top of it — the frosted panels, the gold accent —
+   and that mix is the look.
+
+   Sections opt in with `class="sector <name>"` and override from their own
+   stylesheet. Anything shared lives here, so the frame can never drift
+   between sections.
+   ========================================================================== */
+
+:root {
+  /* Dim HUD labels. Warm and lifted from the old #5e5e5e, which was chosen
+     against a near-black ground and measured 2.2:1 once the brass wash went
+     in. Still the quietest text on the site, just no longer invisible. */
+  --ink-3: #8f8878;
+}
+
+.sector {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  /* Two declarations, not one: older browsers keep the vh fallback. */
+  min-height: var(--sector-min, 100vh);
+  min-height: var(--sector-min, 100dvh);
+  display: flex;
+  flex-direction: column;
+  padding: clamp(1rem, 3vw, 2.25rem);
+  color: var(--ink);
+}
+
+/* A section that sizes to its content instead of the viewport. */
+.sector--short {
+  --sector-min: auto;
+  padding-bottom: clamp(1.5rem, 4vw, 2.5rem);
+}
+
+/* ---- scrim --------------------------------------------------------------- *
+   Darkens the ground enough for content to read while the brass still glows
+   through. Brass-black, never neutral black - a grey scrim would drain the
+   colour out of every section it covers.
+
+   THE HANDOFF RULE. The scrim is anchored to its section, but the brass wash
+   underneath is anchored to the viewport. So any difference between where one
+   section's scrim ends and the next one's begins lands as a hard line at the
+   boundary - which is exactly what it did: measured steps of 47 and 59 in RGB
+   across a single pixel row.
+
+   The fix is that every section hands its neighbour the precise alpha that
+   neighbour opens with. The chain, top of page to bottom:
+
+       hero      0.00 -> 0.05 -> 0.28
+       teardown  0.28 -> 0.30 -> 0.28
+       skills    0.28 -> 0.33 -> 0.50
+       work      0.50 -> 0.78 -> 0.58
+       contact   0.58 -> 0.52 -> 0.52
+
+   Change any bottom value and you MUST change the next section's top to match,
+   or the seam comes back. Only the middle of a section is free.
+
+   Horizontal variation deliberately lives in .app-wash instead: that layer is
+   fixed to the viewport, so it can never produce a seam of its own.         */
+.sector-scrim {
+  --scrim-top: 0.28;
+  --scrim-mid: 0.33;
+  --scrim-bottom: 0.5;
+
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background: linear-gradient(
+    180deg,
+    rgba(11, 8, 3, var(--scrim-top)) 0%,
+    rgba(11, 8, 3, var(--scrim-mid)) 34%,
+    rgba(11, 8, 3, var(--scrim-mid)) 66%,
+    rgba(11, 8, 3, var(--scrim-bottom)) 100%
+  );
+}
+
+/* ---- corner brackets ----------------------------------------------------- */
+.sector-frame {
+  position: absolute;
+  inset: clamp(1rem, 3vw, 2.25rem);
+  z-index: 4;
+  pointer-events: none;
+}
+.sector-frame i {
+  position: absolute;
+  width: 26px;
+  height: 26px;
+  border: 0 solid var(--glass-line);
+}
+.sector-frame .tl { top: 0; left: 0; border-top-width: 1px; border-left-width: 1px; }
+.sector-frame .tr { top: 0; right: 0; border-top-width: 1px; border-right-width: 1px; }
+.sector-frame .bl { bottom: 0; left: 0; border-bottom-width: 1px; border-left-width: 1px; }
+.sector-frame .br { bottom: 0; right: 0; border-bottom-width: 1px; border-right-width: 1px; }
+
+/* ---- header -------------------------------------------------------------- */
+.sector-hud {
+  position: relative;
+  z-index: 5;
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+  padding: 0 clamp(0.5rem, 2vw, 1.75rem);
+  font-family: var(--mono);
+  font-size: 0.7rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
+.sector-hud-label {
+  margin: 0;
+  font-family: var(--mono);
+  font-size: 0.7rem;
+  font-weight: 500;
+  letter-spacing: 0.16em;
+  color: var(--ink);
+}
+.sector-hud-label::before { content: "// "; color: var(--ink-3); }
+
+/* One tier up from --ink-3: this line carries real information (counts,
+   location, availability) and it sits in the brightest part of the brass. */
+.sector-hud-meta {
+  margin: 0;
+  color: var(--ink-soft);
+}
+.sector-hud-meta b { font-weight: 400; color: var(--ink); }
+
+.sector-sep { opacity: 0.4; padding: 0 0.4em; }
+
+/* ---- the line along the bottom ------------------------------------------- */
+.sector-hint {
+  position: absolute;
+  z-index: 5;
+  left: clamp(1rem, 3vw, 2.25rem);
+  bottom: clamp(1rem, 3vw, 2.25rem);
+  margin: 0;
+  padding-left: 1.75rem; /* clears the bottom-left bracket */
+  font-family: var(--mono);
+  font-size: 0.62rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+  transition: color 0.4s ease;
+}
+
+/* ---- the body between header and hint ------------------------------------ */
+.sector-body {
+  position: relative;
+  z-index: 3;
+  flex: 1;
+  display: flex;
+  align-items: center;
+  padding: clamp(1rem, 3vw, 2rem) clamp(0.5rem, 2vw, 1.75rem) 0;
+}
+
+@media (max-width: 900px) {
+  /* The hint is decorative and the first thing to cost real estate. */
+  .sector-hint { display: none; }
+}

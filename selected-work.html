@@ -1,0 +1,1033 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Selected Work — Augniña Krizzel Reburiano</title>
+<style>
+/* ==========================================================================
+   SELECTED WORK — deep-space scene
+   Monochrome base, brass as the single accent, terminal/HUD framing.
+
+   Brass (--brass) appears in exactly four places, on purpose:
+     1. the selected planet's outline
+     2. the selected planet's flag
+     3. the HUD sector code
+     4. the open panel's object number
+   Everything else is greyscale. Keep it that way or the accent stops reading
+   as a brand colour and starts reading as decoration.
+   ========================================================================== */
+
+.sw {
+  /* ---- palette ---------------------------------------------------------- */
+  --bg: #000000;
+  --ink: #ededed;          /* primary text */
+  --ink-2: #9a9a9a;        /* secondary text */
+  --ink-3: #5e5e5e;        /* dim / labels */
+  --ink-4: #333333;        /* placeholder outlines */
+
+  --line: rgba(255, 255, 255, 0.14);      /* hairline border */
+  --line-soft: rgba(255, 255, 255, 0.07); /* barely-there hairline */
+
+  --brass: #b8892b;
+  --brass-soft: #d4a544;
+
+  --glass: rgba(255, 255, 255, 0.026);
+
+  --mono: "JetBrains Mono", "IBM Plex Mono", ui-monospace, SFMono-Regular,
+          "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
+
+  /* planet scale multiplier — dialled down on smaller screens */
+  --pscale: 1;
+
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  min-height: 100vh;
+  min-height: 100dvh;
+  padding: clamp(1rem, 3vw, 2.25rem);
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--mono);
+  font-size: 15px;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+}
+
+.sw *,
+.sw *::before,
+.sw *::after { box-sizing: border-box; }
+
+/* ---- starfield canvas ---------------------------------------------------- */
+.sw-stars {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+  pointer-events: none;
+}
+
+/* soft vignette so the corners fall away into black */
+.sw-vignette {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  background: radial-gradient(ellipse 78% 70% at 50% 46%, transparent 42%, rgba(0, 0, 0, 0.72) 100%);
+}
+
+/* ---- corner brackets ----------------------------------------------------- */
+.sw-frame {
+  position: absolute;
+  inset: clamp(1rem, 3vw, 2.25rem);
+  z-index: 4;
+  pointer-events: none;
+}
+.sw-frame i {
+  position: absolute;
+  width: 26px;
+  height: 26px;
+  border: 0 solid var(--line);
+}
+.sw-frame .tl { top: 0; left: 0; border-top-width: 1px; border-left-width: 1px; }
+.sw-frame .tr { top: 0; right: 0; border-top-width: 1px; border-right-width: 1px; }
+.sw-frame .bl { bottom: 0; left: 0; border-bottom-width: 1px; border-left-width: 1px; }
+.sw-frame .br { bottom: 0; right: 0; border-bottom-width: 1px; border-right-width: 1px; }
+
+/* ---- HUD ----------------------------------------------------------------- */
+.sw-hud {
+  position: relative;
+  z-index: 5;
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+  padding: 0 clamp(0.5rem, 2vw, 1.75rem);
+  font-size: 0.7rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+.sw-hud-label { margin: 0; color: var(--ink); }
+.sw-hud-meta { margin: 0; color: var(--ink-3); }
+.sw-hud-meta b { font-weight: 400; color: var(--ink-2); }
+.sw-sep { opacity: 0.4; padding: 0 0.4em; }
+/* BRASS 3 of 4 — the sector code */
+.sw-sector { color: var(--brass); }
+
+/* ---- the space that compresses ------------------------------------------- */
+.sw-space {
+  position: relative;
+  z-index: 3;
+  height: clamp(430px, 64vh, 700px);
+  margin-top: clamp(0.75rem, 2vw, 1.5rem);
+  transform-origin: 50% 50%;
+  transition: transform 0.85s cubic-bezier(0.22, 0.82, 0.24, 1);
+  will-change: transform;
+}
+/* THE ONE "WOW" MOMENT: the whole scene compresses and slides aside. */
+.sw.is-open .sw-space { transform: translateX(-15%) scale(0.68); }
+
+/* faint orbit guides — technical-poster wireframe */
+.sw-orbits {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0.5;
+}
+.sw-orbits i {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  border: 1px solid var(--line-soft);
+  border-radius: 50%;
+  transform: translate(-50%, -50%) rotate(-14deg);
+}
+.sw-orbits .o1 { width: 62%; height: 84%; }
+.sw-orbits .o2 { width: 96%; height: 118%; }
+
+/* ---- planets ------------------------------------------------------------- */
+.sw-planets { margin: 0; padding: 0; list-style: none; }
+
+.p-wrap {
+  position: absolute;
+  left: var(--x);
+  top: var(--y);
+  transform: translate(-50%, -50%);
+}
+
+.planet {
+  position: relative;
+  display: block;
+  width: calc(var(--size) * var(--pscale));
+  height: calc(var(--size) * var(--pscale));
+  padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition: transform 0.45s cubic-bezier(0.22, 0.9, 0.3, 1);
+}
+.planet:hover,
+.planet:focus-visible { transform: translateY(-6px); }
+.planet:focus { outline: none; }
+.planet:focus-visible .planet-body {
+  box-shadow: 0 0 0 1px var(--ink), 0 0 0 5px rgba(255, 255, 255, 0.12);
+}
+
+/* the sphere: soft shading, never shiny */
+.planet-body {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background:
+    radial-gradient(circle at 34% 27%,
+      hsl(0 0% var(--lit, 44%)) 0%,
+      hsl(0 0% calc(var(--lit, 44%) - 12%)) 26%,
+      hsl(0 0% calc(var(--lit, 44%) - 26%)) 52%,
+      hsl(0 0% calc(var(--lit, 44%) - 36%)) 74%,
+      hsl(0 0% calc(var(--lit, 44%) - 41%)) 100%);
+  box-shadow:
+    inset -10px -12px 26px rgba(0, 0, 0, 0.72),  /* terminator */
+    inset 3px 3px 10px rgba(255, 255, 255, 0.05); /* soft key light */
+  transition: box-shadow 0.4s ease;
+}
+/* faint surface mottling, kept very low contrast */
+.planet-body::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  opacity: 0.5;
+  background:
+    radial-gradient(circle at 62% 66%, rgba(0, 0, 0, 0.3) 0 12%, transparent 13%),
+    radial-gradient(circle at 40% 72%, rgba(0, 0, 0, 0.22) 0 8%, transparent 9%),
+    radial-gradient(circle at 71% 33%, rgba(255, 255, 255, 0.05) 0 9%, transparent 10%);
+}
+
+.planet:hover .planet-body,
+.planet:focus-visible .planet-body {
+  box-shadow:
+    inset -10px -12px 26px rgba(0, 0, 0, 0.72),
+    inset 3px 3px 10px rgba(255, 255, 255, 0.05),
+    0 0 0 1px rgba(255, 255, 255, 0.28);
+}
+
+/* BRASS 1 of 4 — the selected planet's outline */
+.planet[aria-pressed="true"] .planet-body {
+  box-shadow:
+    inset -10px -12px 26px rgba(0, 0, 0, 0.72),
+    inset 3px 3px 10px rgba(255, 255, 255, 0.05),
+    0 0 0 1px var(--brass),
+    0 0 22px -4px rgba(184, 137, 43, 0.55);
+}
+
+/* optional ring — a flat ellipse, deliberately faint */
+.planet-ring {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 168%;
+  height: 168%;
+  border: 1px solid var(--line);
+  border-radius: 50%;
+  transform: translate(-50%, -50%) rotate(-19deg) scaleY(0.26);
+  pointer-events: none;
+}
+.planet-ring::before {
+  content: "";
+  position: absolute;
+  inset: 11%;
+  border: 1px solid var(--line-soft);
+  border-radius: 50%;
+}
+
+/* ---- logo slot on the planet face ---------------------------------------- */
+.planet-logo {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 42%;
+  height: 42%;
+  transform: translate(-50%, -50%);
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  border-radius: 8px;
+}
+.planet-logo img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  filter: grayscale(1) contrast(1.05);
+  opacity: 0.9;
+}
+/* shown until a real logo is dropped in */
+.planet-logo .slot {
+  display: grid;
+  place-items: center;
+  width: 100%;
+  height: 100%;
+  border: 1px dashed var(--ink-4);
+  border-radius: 8px;
+  color: var(--ink-3);
+  font-size: 8px;
+  letter-spacing: 0.1em;
+  text-align: center;
+  line-height: 1.25;
+}
+
+/* ---- the planted flag ----------------------------------------------------- */
+.planet-flag {
+  position: absolute;
+  top: 2%;
+  right: 12%;
+  width: 34%;
+  height: 40%;
+  transform-origin: 50% 100%;
+  transform: rotate(15deg);
+  pointer-events: none;
+}
+.planet-flag svg { width: 100%; height: 100%; overflow: visible; }
+.planet-flag .pole { stroke: var(--ink-2); stroke-width: 1.4; }
+.planet-flag .cloth {
+  fill: rgba(255, 255, 255, 0.16);
+  stroke: var(--ink-2);
+  stroke-width: 1.2;
+  transition: fill 0.35s ease, stroke 0.35s ease;
+}
+/* BRASS 2 of 4 — the active flag */
+.planet[aria-pressed="true"] .planet-flag .cloth {
+  fill: rgba(184, 137, 43, 0.45);
+  stroke: var(--brass-soft);
+}
+.planet[aria-pressed="true"] .planet-flag .pole { stroke: var(--brass-soft); }
+
+/* ---- planet label --------------------------------------------------------- */
+.planet-tag {
+  position: absolute;
+  top: calc(100% + 10px);
+  left: 50%;
+  transform: translateX(-50%);
+  white-space: nowrap;
+  font-size: 0.62rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+  transition: color 0.3s ease;
+}
+.planet:hover .planet-tag,
+.planet:focus-visible .planet-tag { color: var(--ink); }
+.planet[aria-pressed="true"] .planet-tag { color: var(--ink); }
+
+/* ---- astronaut ------------------------------------------------------------ */
+.sw-astro {
+  position: absolute;
+  left: 5%;
+  top: 80%;
+  width: calc(150px * var(--pscale));
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+  animation: float 11s ease-in-out infinite;
+}
+.sw-astro svg { width: 100%; height: auto; display: block; }
+
+@keyframes float {
+  0%, 100% { transform: translate(-50%, -50%) rotate(-3deg); }
+  50%      { transform: translate(-50%, -56%) rotate(2deg); }
+}
+
+/* ---- detail panel --------------------------------------------------------- */
+.sw-panel {
+  position: absolute;
+  z-index: 6;
+  top: clamp(1rem, 3vw, 2.25rem);
+  right: clamp(1rem, 3vw, 2.25rem);
+  bottom: clamp(1rem, 3vw, 2.25rem);
+  width: min(420px, 38vw);
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--line);
+  border-radius: 2px;
+  background: rgba(8, 8, 8, 0.72);
+  -webkit-backdrop-filter: blur(14px);
+  backdrop-filter: blur(14px);
+  opacity: 0;
+  visibility: hidden;
+  transform: translateX(26px);
+  transition: opacity 0.5s ease, transform 0.6s cubic-bezier(0.22, 0.82, 0.24, 1),
+              visibility 0s linear 0.6s;
+}
+.sw.is-open .sw-panel {
+  opacity: 1;
+  visibility: visible;
+  transform: none;
+  transition: opacity 0.45s ease 0.12s,
+              transform 0.6s cubic-bezier(0.22, 0.82, 0.24, 1) 0.12s,
+              visibility 0s;
+}
+
+.panel-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.85rem 1rem;
+  border-bottom: 1px solid var(--line-soft);
+  font-size: 0.66rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+/* BRASS 4 of 4 — the object number */
+.panel-idx { margin: 0; color: var(--brass); }
+
+.panel-close {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.32rem 0.6rem;
+  border: 1px solid var(--line);
+  border-radius: 2px;
+  background: none;
+  color: var(--ink-2);
+  font: inherit;
+  font-size: 0.62rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: color 0.25s ease, border-color 0.25s ease;
+}
+.panel-close:hover { color: var(--ink); border-color: rgba(255, 255, 255, 0.3); }
+.panel-close:focus-visible { outline: 1px solid var(--ink); outline-offset: 2px; }
+
+.panel-scroll {
+  flex: 1;
+  overflow-y: auto;
+  padding: 1.15rem 1rem 1.4rem;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.16) transparent;
+}
+.panel-scroll::-webkit-scrollbar { width: 6px; }
+.panel-scroll::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.16); }
+
+/* logo slot at the top of the panel */
+.panel-logo {
+  width: 56px;
+  height: 56px;
+  margin-bottom: 0.9rem;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+}
+.panel-logo img { width: 100%; height: 100%; object-fit: contain; filter: grayscale(1); }
+
+.panel-name {
+  margin: 0 0 0.35rem;
+  font-size: 1.32rem;
+  font-weight: 500;
+  letter-spacing: -0.01em;
+}
+.panel-summary { margin: 0 0 1.25rem; color: var(--ink-2); font-size: 0.82rem; }
+
+.panel-meta { margin: 0; }
+.panel-meta > div { padding: 0.85rem 0; border-top: 1px solid var(--line-soft); }
+.panel-meta dt {
+  margin-bottom: 0.35rem;
+  color: var(--ink-3);
+  font-size: 0.62rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+.panel-meta dd { margin: 0; color: var(--ink); font-size: 0.82rem; }
+
+.panel-stack {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.panel-stack li {
+  padding: 0.2rem 0.5rem;
+  border: 1px solid var(--line);
+  border-radius: 2px;
+  color: var(--ink-2);
+  font-size: 0.66rem;
+  letter-spacing: 0.06em;
+}
+
+/* screenshot slots */
+.panel-shots { display: grid; gap: 0.5rem; margin-top: 0.85rem; }
+.panel-shots img { width: 100%; display: block; border: 1px solid var(--line-soft); filter: grayscale(1); }
+
+.slot-box {
+  display: grid;
+  place-items: center;
+  min-height: 92px;
+  padding: 0.75rem;
+  border: 1px dashed var(--ink-4);
+  border-radius: 2px;
+  color: var(--ink-3);
+  font-size: 0.62rem;
+  letter-spacing: 0.1em;
+  text-align: center;
+  text-transform: uppercase;
+}
+
+.panel-foot { padding: 1rem; border-top: 1px solid var(--line-soft); }
+.panel-cta {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.55rem;
+  padding: 0.55rem 0.95rem;
+  border: 1px solid var(--line);
+  border-radius: 2px;
+  color: var(--ink);
+  font-size: 0.7rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  text-decoration: none;
+  transition: border-color 0.25s ease, background 0.25s ease;
+}
+.panel-cta:hover { border-color: rgba(255, 255, 255, 0.34); background: rgba(255, 255, 255, 0.04); }
+.panel-cta:focus-visible { outline: 1px solid var(--ink); outline-offset: 2px; }
+.panel-note {
+  margin: 0;
+  color: var(--ink-3);
+  font-size: 0.68rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+/* a TODO field renders visibly dim so gaps are obvious */
+.todo { color: var(--ink-3); }
+
+/* ---- footer hint ---------------------------------------------------------- */
+.sw-hint {
+  position: absolute;
+  z-index: 5;
+  left: clamp(1rem, 3vw, 2.25rem);
+  bottom: clamp(1rem, 3vw, 2.25rem);
+  margin: 0;
+  padding-left: 1.75rem;
+  color: var(--ink-3);
+  font-size: 0.62rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+.sw.is-open .sw-hint { color: var(--ink-4); }
+
+.sr-only {
+  position: absolute;
+  width: 1px; height: 1px;
+  padding: 0; margin: -1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* ==========================================================================
+   Responsive
+   ========================================================================== */
+@media (max-width: 1100px) { .sw { --pscale: 0.82; } }
+
+@media (max-width: 900px) {
+  .sw { --pscale: 0.62; }
+  /* no room to compress beside a panel — the panel takes the screen instead */
+  .sw.is-open .sw-space { transform: none; }
+  .sw-panel {
+    position: fixed;
+    inset: 0;
+    width: auto;
+    border: 0;
+    border-radius: 0;
+    background: rgba(6, 6, 6, 0.94);
+    transform: translateY(18px);
+  }
+  .sw-hint { display: none; }
+}
+
+@media (max-width: 560px) {
+  .sw { --pscale: 0.5; font-size: 14px; }
+  .sw-space { height: clamp(400px, 58vh, 520px); }
+  .sw-astro { left: 12%; top: 84%; }
+}
+
+/* ==========================================================================
+   Reduced motion — the compress, the float and the drift all stop.
+   The section stays fully usable; only the movement goes.
+   ========================================================================== */
+@media (prefers-reduced-motion: reduce) {
+  .sw-space,
+  .sw-panel,
+  .planet,
+  .planet-body { transition: none; }
+  .sw.is-open .sw-space { transform: translateX(-15%) scale(0.68); }
+  .sw-astro { animation: none; }
+  .planet:hover, .planet:focus-visible { transform: none; }
+}
+@media (prefers-reduced-motion: reduce) and (max-width: 900px) {
+  .sw.is-open .sw-space { transform: none; }
+}
+</style>
+</head>
+<body style="margin:0;background:#000">
+
+<section class="sw" id="selected-work">
+  <canvas class="sw-stars" id="starfield" aria-hidden="true"></canvas>
+  <div class="sw-vignette" aria-hidden="true"></div>
+  <div class="sw-frame" aria-hidden="true"><i class="tl"></i><i class="tr"></i><i class="bl"></i><i class="br"></i></div>
+
+  <header class="sw-hud">
+    <p class="sw-hud-label">// Selected Work</p>
+    <p class="sw-hud-meta">
+      <b id="hud-count">06</b> objects
+      <span class="sw-sep">·</span> sector <span class="sw-sector">AK-01</span>
+    </p>
+  </header>
+
+  <!-- Everything inside .sw-space compresses when a project opens. -->
+  <div class="sw-space" id="space">
+    <div class="sw-orbits" aria-hidden="true"><i class="o1"></i><i class="o2"></i></div>
+
+    <h2 class="sr-only">Selected work</h2>
+    <ul class="sw-planets" id="planets"></ul>
+
+    <div class="sw-astro" aria-hidden="true">
+      <svg viewBox="0 0 130 170" fill="none" stroke-linecap="round" stroke-linejoin="round">
+        <!-- tether drifting off toward the lower left -->
+        <path d="M40 128 C22 140 12 152 2 168" stroke="#4a4a4a" stroke-width="1" stroke-dasharray="3 4" />
+        <!-- backpack -->
+        <rect x="40" y="60" width="50" height="46" rx="10" fill="#171717" stroke="#5e5e5e" stroke-width="1.1" />
+        <!-- left arm -->
+        <rect x="14" y="70" width="30" height="15" rx="7.5" fill="#1c1c1c" stroke="#6a6a6a" stroke-width="1.1" transform="rotate(-24 29 77)" />
+        <!-- right arm -->
+        <rect x="86" y="70" width="30" height="15" rx="7.5" fill="#1c1c1c" stroke="#6a6a6a" stroke-width="1.1" transform="rotate(22 101 77)" />
+        <!-- torso -->
+        <rect x="42" y="58" width="46" height="52" rx="16" fill="#242424" stroke="#7a7a7a" stroke-width="1.2" />
+        <!-- chest control panel -->
+        <rect x="55" y="74" width="20" height="13" rx="2" fill="#0d0d0d" stroke="#5e5e5e" stroke-width="1" />
+        <circle cx="60" cy="80.5" r="1.5" fill="#6a6a6a" />
+        <circle cx="66" cy="80.5" r="1.5" fill="#4a4a4a" />
+        <!-- legs -->
+        <rect x="46" y="106" width="17" height="40" rx="8.5" fill="#1f1f1f" stroke="#6a6a6a" stroke-width="1.1" transform="rotate(9 54 126)" />
+        <rect x="67" y="106" width="17" height="40" rx="8.5" fill="#1f1f1f" stroke="#6a6a6a" stroke-width="1.1" transform="rotate(-13 75 126)" />
+        <!-- helmet -->
+        <circle cx="65" cy="38" r="25" fill="#1a1a1a" stroke="#8a8a8a" stroke-width="1.3" />
+        <!-- visor -->
+        <path d="M48 34 a17 15 0 0 1 34 0 a17 19 0 0 1 -34 0 z" fill="#050505" stroke="#6a6a6a" stroke-width="1" />
+        <!-- faint visor reflection -->
+        <path d="M55 28 a9 8 0 0 1 12 -2" stroke="#4f4f4f" stroke-width="1.2" />
+      </svg>
+    </div>
+  </div>
+
+  <!-- Detail panel. Populated from PROJECTS by renderPanel(). -->
+  <aside class="sw-panel" id="panel" role="dialog" aria-labelledby="panel-name" aria-modal="false" inert>
+    <div class="panel-head">
+      <p class="panel-idx" id="panel-idx">OBJ-00</p>
+      <button type="button" class="panel-close" id="panel-close">Esc &nbsp;&#10005;</button>
+    </div>
+
+    <div class="panel-scroll" id="panel-scroll">
+      <div class="panel-logo" id="panel-logo"></div>
+      <h3 class="panel-name" id="panel-name"></h3>
+      <p class="panel-summary" id="panel-summary"></p>
+
+      <dl class="panel-meta">
+        <div><dt>Role</dt><dd id="panel-role"></dd></div>
+        <div><dt>What I built</dt><dd id="panel-built"></dd></div>
+        <div><dt>Result</dt><dd id="panel-result"></dd></div>
+        <div><dt>Stack</dt><dd><ul class="panel-stack" id="panel-stack"></ul></dd></div>
+        <div><dt>Screens</dt><dd><div class="panel-shots" id="panel-shots"></div></dd></div>
+      </dl>
+    </div>
+
+    <div class="panel-foot" id="panel-foot"></div>
+  </aside>
+
+  <p class="sw-hint">Select an object &nbsp;·&nbsp; Esc to return</p>
+</section>
+
+<script>
+(function () {
+  "use strict";
+
+  /* ======================================================================
+     PROJECT DATA — everything you'll want to edit lives in this one array.
+
+     To fill in your own material, edit these three fields per project:
+       liveUrl : "https://..."          or null for case-study-only
+       logo    : "images/logo-x.svg"    or null to keep the dashed slot
+       shots   : ["images/a.png", ...]  or [] to keep the dashed slots
+
+     Any text field set to "TODO" renders dimmed so gaps stay visible.
+
+     Planet placement:
+       x, y  — position in the scene, as a CSS percentage
+       size  — diameter in px (scaled down on small screens)
+       lit   — base lightness %, 38-50 keeps it in the grey family
+       ring  — true for a faint ring
+     ====================================================================== */
+  var PROJECTS = [
+    {
+      id: "aicore",
+      name: "AiCore",
+      summary: "Forensic tool that rebuilds crime scenes in 3D from photos.",
+      role: "Frontend Developer",
+      built: "I built the frontend and the interactive 3D model viewer that turns raw scan data into a clean, navigable model you can move around and measure.",
+      result: "A production build now in beta testing with forensic teams. Offline desktop app.",
+      stack: ["React", "3D web tools"],
+      liveUrl: null,               // <-- no live link: offline desktop app
+      logo: null,                  // <-- PASTE LOGO PATH HERE
+      shots: [],                   // <-- PASTE SCREENSHOT PATHS HERE
+      x: "62%", y: "20%", size: 150, lit: 46, ring: true
+    },
+    {
+      id: "oxilia",
+      name: "Oxilia",
+      summary: "All-in-one SaaS workspace where a team chats, plans, and runs projects in one place.",
+      role: "Full-Stack Developer",
+      built: "I built full-stack features for a single app: team chat with channels and direct messages, a shared calendar, project boards, a CRM, video calls, and a visual view of the development cycle from request to handoff.",
+      result: "Shipped to production and now the team's daily tool, with a mobile version being prepped for the Play Store.",
+      stack: ["React", "Node.js"],
+      liveUrl: null,               // <-- PASTE LIVE LINK HERE
+      logo: null,                  // <-- PASTE LOGO PATH HERE
+      shots: [],                   // <-- PASTE SCREENSHOT PATHS HERE
+      x: "30%", y: "31%", size: 122, lit: 42, ring: false
+    },
+    {
+      id: "tingi-station",
+      name: "Tingi Station",
+      summary: "Full site redesign plus new features for a neighbourhood refill store.",
+      role: "Shopify Developer",
+      built: "I overhauled the storefront's design and smoothed the whole flow from browsing collections to checkout, including a playful touch where you tap a jar to fill it.",
+      result: "Live and serving a high volume of shoppers.",
+      stack: ["Shopify", "Liquid"],
+      liveUrl: null,               // <-- PASTE LIVE LINK HERE
+      logo: null,                  // <-- PASTE LOGO PATH HERE
+      shots: [],                   // <-- PASTE SCREENSHOT PATHS HERE
+      x: "81%", y: "49%", size: 106, lit: 40, ring: false
+    },
+    {
+      id: "gourmet-getaway-tours",
+      name: "Gourmet Getaway Tours",
+      summary: "Chef-led Hunter Valley food and wine tours, for an Australian client.",
+      role: "Full-Stack Developer & SEO",
+      built: "I built the site end to end — the customer-facing pages and the booking logic behind them — and moved reservations onto a more reliable booking platform. I also handled on-page SEO.",
+      result: "More completed bookings, more new customers, and higher search visibility.",
+      stack: ["TypeScript", "SEO"],
+      liveUrl: null,               // <-- PASTE LIVE LINK HERE
+      logo: null,                  // <-- PASTE LOGO PATH HERE
+      shots: [],                   // <-- PASTE SCREENSHOT PATHS HERE
+      x: "47%", y: "63%", size: 134, lit: 48, ring: true
+    },
+    {
+      id: "socialhat",
+      name: "SocialHat",
+      summary: "Frontend work at a marketing agency.",
+      role: "Frontend Developer",
+      built: "TODO",               // <-- no data on file; write what you built
+      result: "TODO",              // <-- and the outcome
+      stack: [],                   // <-- and the stack
+      liveUrl: null,               // <-- PASTE LIVE LINK HERE
+      logo: null,                  // <-- PASTE LOGO PATH HERE
+      shots: [],                   // <-- PASTE SCREENSHOT PATHS HERE
+      x: "13%", y: "21%", size: 94, lit: 38, ring: false
+    },
+    {
+      id: "mealplanner",
+      name: "MealPlanner",
+      summary: "Nutrition and meal-planning app. My capstone project.",
+      role: "Full-Stack Mobile Developer",
+      built: "I built the full app and its data layer: a dashboard with calories and macros, a meal planner, recipes, a grocery list, and water, exercise, and weight trackers. Daily nutrient goals follow the Philippine national nutrition standards, and the data stays on the phone — only login goes online.",
+      result: "Live and in active daily use.",
+      stack: ["React Native"],
+      liveUrl: null,               // <-- no live link: mobile only
+      logo: null,                  // <-- PASTE LOGO PATH HERE
+      shots: [],                   // <-- PASTE SCREENSHOT PATHS HERE
+      x: "70%", y: "77%", size: 114, lit: 44, ring: false
+    }
+  ];
+
+  /* ======================================================================
+     Element references
+     ====================================================================== */
+  var section = document.getElementById("selected-work");
+  var list = document.getElementById("planets");
+  var panel = document.getElementById("panel");
+  var closeBtn = document.getElementById("panel-close");
+  var scroller = document.getElementById("panel-scroll");
+
+  var el = {
+    idx: document.getElementById("panel-idx"),
+    logo: document.getElementById("panel-logo"),
+    name: document.getElementById("panel-name"),
+    summary: document.getElementById("panel-summary"),
+    role: document.getElementById("panel-role"),
+    built: document.getElementById("panel-built"),
+    result: document.getElementById("panel-result"),
+    stack: document.getElementById("panel-stack"),
+    shots: document.getElementById("panel-shots"),
+    foot: document.getElementById("panel-foot")
+  };
+
+  var openId = null;       // id of the open project, or null
+  var lastFocused = null;  // planet button to restore focus to on close
+
+  var reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+  document.getElementById("hud-count").textContent =
+    String(PROJECTS.length).padStart(2, "0");
+
+  /* ======================================================================
+     Build the planets
+     ====================================================================== */
+  function planetMarkup(p) {
+    var logoInner = p.logo
+      ? '<img src="' + p.logo + '" alt="" />'
+      : '<span class="slot">LOGO</span>';
+
+    return '' +
+      '<button type="button" class="planet" data-id="' + p.id + '" aria-pressed="false">' +
+        '<span class="planet-body" style="--lit:' + p.lit + '%">' +
+          (p.ring ? '<span class="planet-ring"></span>' : '') +
+          '<span class="planet-logo">' + logoInner + '</span>' +
+        '</span>' +
+        '<span class="planet-flag">' +
+          '<svg viewBox="0 0 40 46" aria-hidden="true">' +
+            '<line class="pole" x1="8" y1="46" x2="8" y2="2" />' +
+            '<path class="cloth" d="M8 4 L34 11 L8 20 Z" />' +
+          '</svg>' +
+        '</span>' +
+        '<span class="planet-tag">' + p.name + '</span>' +
+      '</button>';
+  }
+
+  PROJECTS.forEach(function (p) {
+    var li = document.createElement("li");
+    li.className = "p-wrap";
+    li.style.setProperty("--x", p.x);
+    li.style.setProperty("--y", p.y);
+    li.style.setProperty("--size", p.size + "px");
+    li.innerHTML = planetMarkup(p);
+    list.appendChild(li);
+  });
+
+  /* ======================================================================
+     Panel rendering
+     ====================================================================== */
+
+  // A field left as "TODO" renders dimmed rather than silently blank.
+  function field(value) {
+    if (value === "TODO" || !value) {
+      return '<span class="todo">// TODO</span>';
+    }
+    return value;
+  }
+
+  function renderPanel(p, index) {
+    el.idx.textContent = "OBJ-" + String(index + 1).padStart(2, "0");
+    el.name.textContent = p.name;
+    el.summary.textContent = p.summary;
+    el.role.innerHTML = field(p.role);
+    el.built.innerHTML = field(p.built);
+    el.result.innerHTML = field(p.result);
+
+    el.logo.innerHTML = p.logo
+      ? '<img src="' + p.logo + '" alt="' + p.name + ' logo" />'
+      : '<div class="slot-box" style="min-height:56px;width:56px;font-size:.52rem">LOGO</div>';
+
+    el.stack.innerHTML = p.stack.length
+      ? p.stack.map(function (s) { return "<li>" + s + "</li>"; }).join("")
+      : '<li class="todo">// TODO</li>';
+
+    el.shots.innerHTML = p.shots.length
+      ? p.shots.map(function (src) {
+          return '<img src="' + src + '" alt="' + p.name + ' screenshot" loading="lazy" />';
+        }).join("")
+      : '<div class="slot-box">Screenshot slot</div><div class="slot-box">Screenshot slot</div>';
+
+    el.foot.innerHTML = p.liveUrl
+      ? '<a class="panel-cta" href="' + p.liveUrl + '" target="_blank" rel="noreferrer">Visit live site &nbsp;&#8599;</a>'
+      : '<p class="panel-note">Case study only — no live link</p>';
+  }
+
+  /* ======================================================================
+     Open / close
+     ====================================================================== */
+  function open(id, trigger) {
+    var index = PROJECTS.findIndex(function (p) { return p.id === id; });
+    if (index === -1) return;
+
+    renderPanel(PROJECTS[index], index);
+    openId = id;
+    lastFocused = trigger || null;
+
+    section.classList.add("is-open");
+    panel.removeAttribute("inert");
+    scroller.scrollTop = 0;
+
+    // Reflect selection on every planet.
+    list.querySelectorAll(".planet").forEach(function (b) {
+      b.setAttribute("aria-pressed", String(b.dataset.id === id));
+    });
+
+    // Move focus into the panel so keyboard users land where the content is.
+    closeBtn.focus();
+  }
+
+  function close() {
+    if (!openId) return;
+    openId = null;
+
+    section.classList.remove("is-open");
+    panel.setAttribute("inert", "");
+
+    list.querySelectorAll(".planet").forEach(function (b) {
+      b.setAttribute("aria-pressed", "false");
+    });
+
+    if (lastFocused) {
+      lastFocused.focus();
+      lastFocused = null;
+    }
+  }
+
+  // Planets are real buttons, so Enter and Space already activate them.
+  list.addEventListener("click", function (e) {
+    var btn = e.target.closest(".planet");
+    if (!btn) return;
+    if (btn.dataset.id === openId) {
+      close();           // clicking the open planet again closes it
+    } else {
+      open(btn.dataset.id, btn);
+    }
+  });
+
+  closeBtn.addEventListener("click", close);
+
+  document.addEventListener("keydown", function (e) {
+    if (e.key === "Escape" && openId) {
+      e.preventDefault();
+      close();
+    }
+  });
+
+  /* ======================================================================
+     Starfield
+     Slow drift, faint twinkle. Pauses when off-screen or on a hidden tab,
+     and draws a single static frame when reduced motion is requested.
+     ====================================================================== */
+  var canvas = document.getElementById("starfield");
+  var ctx = canvas.getContext("2d");
+  var stars = [];
+  var raf = null;
+  var visible = true;
+  var w = 0, h = 0;
+
+  function sizeCanvas() {
+    var dpr = Math.min(window.devicePixelRatio || 1, 2);
+    var rect = canvas.getBoundingClientRect();
+    w = rect.width;
+    h = rect.height;
+    canvas.width = Math.round(w * dpr);
+    canvas.height = Math.round(h * dpr);
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    seed();
+  }
+
+  function seed() {
+    // Density scales with area so big screens don't look empty.
+    var count = Math.round((w * h) / 7000);
+    count = Math.max(70, Math.min(260, count));
+    stars = [];
+    for (var i = 0; i < count; i++) {
+      var depth = Math.random();          // 0 = far, 1 = near
+      stars.push({
+        x: Math.random() * w,
+        y: Math.random() * h,
+        r: 0.35 + depth * 1.15,
+        a: 0.12 + depth * 0.62,           // base alpha
+        // Nearer stars drift faster. Everything is slow.
+        vx: (0.02 + depth * 0.05) * (Math.random() < 0.5 ? -1 : 1),
+        vy: (0.01 + depth * 0.03) * (Math.random() < 0.5 ? -1 : 1),
+        tw: Math.random() * Math.PI * 2,  // twinkle phase
+        ts: 0.0006 + Math.random() * 0.0014
+      });
+    }
+  }
+
+  function draw(t) {
+    ctx.clearRect(0, 0, w, h);
+    for (var i = 0; i < stars.length; i++) {
+      var s = stars[i];
+      var alpha = s.a * (0.75 + 0.25 * Math.sin(s.tw + t * s.ts));
+      ctx.globalAlpha = Math.max(0, Math.min(1, alpha));
+      ctx.fillStyle = "#ffffff";
+      ctx.beginPath();
+      ctx.arc(s.x, s.y, s.r, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.globalAlpha = 1;
+  }
+
+  function step(t) {
+    for (var i = 0; i < stars.length; i++) {
+      var s = stars[i];
+      s.x += s.vx;
+      s.y += s.vy;
+      // wrap around the edges
+      if (s.x < -2) s.x = w + 2; else if (s.x > w + 2) s.x = -2;
+      if (s.y < -2) s.y = h + 2; else if (s.y > h + 2) s.y = -2;
+    }
+    draw(t);
+    raf = requestAnimationFrame(step);
+  }
+
+  function start() {
+    if (raf || reduceMotion || !visible) return;
+    raf = requestAnimationFrame(step);
+  }
+  function stop() {
+    if (raf) { cancelAnimationFrame(raf); raf = null; }
+  }
+
+  sizeCanvas();
+  if (reduceMotion) {
+    draw(0);              // one static frame, no loop
+  } else {
+    start();
+  }
+
+  var resizeTimer = null;
+  window.addEventListener("resize", function () {
+    clearTimeout(resizeTimer);
+    resizeTimer = setTimeout(function () {
+      sizeCanvas();
+      if (reduceMotion) draw(0);
+    }, 150);
+  });
+
+  document.addEventListener("visibilitychange", function () {
+    if (document.hidden) { stop(); } else { start(); }
+  });
+
+  // Don't burn frames while the section is scrolled out of view.
+  if ("IntersectionObserver" in window) {
+    new IntersectionObserver(function (entries) {
+      visible = entries[0].isIntersecting;
+      if (visible) start(); else stop();
+    }, { threshold: 0 }).observe(section);
+  }
+})();
+</script>
+
+</body>
+</html>
