@@ -138,7 +138,7 @@ export default function SkillsKeyboard() {
         <aside className="kb-panel" aria-live="polite">
           <p className="kb-panel-eyebrow">
             <span>(tech stack)</span>
-            <span className="kb-panel-idx">{active ? `KEY-${pad(index + 1)}` : "——"}</span>
+            <span className="kb-panel-idx">{active ? `KEY-${pad(index + 1)}` : "··"}</span>
           </p>
 
           {active ? (
@@ -153,8 +153,8 @@ export default function SkillsKeyboard() {
             <div className="kb-panel-body is-idle">
               <h3 className="kb-panel-name">Press a key</h3>
               <p className="kb-panel-desc">
-                Every cap is something I actually build with. Press one — or tab to it and hit
-                enter — and it lands here in plain English.
+                Every cap is something I actually build with. Press one, or tab to it and hit
+                enter, and it lands here in plain English.
               </p>
               <p className="kb-panel-desc">
                 The {learningCount} keys wearing a{" "}
@@ -215,7 +215,7 @@ export default function SkillsKeyboard() {
                         <span className="kb-label">{skill.label}</span>
                         {skill.learning && <span className="kb-dot" aria-hidden="true" />}
                       </span>
-                      {skill.learning && <span className="sr-only"> — still learning</span>}
+                      {skill.learning && <span className="sr-only"> (still learning)</span>}
                     </button>
                   );
                 })}

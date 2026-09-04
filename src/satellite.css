@@ -1,0 +1,100 @@
+/* ==========================================================================
+   SATELLITE — the hero object's layers.
+
+   Two stacked layers, and the reason they are separate is performance:
+
+     .sat-canvas  transparent WebGL. The hero's background (.hero-fx — the
+                  aurora, the milky way, the flow field) is untouched and
+                  shows straight through it. Nothing here paints a ground.
+     .sat-glow    the gold bloom. A painted gradient whose only animated
+                  property is opacity, written from the render loop as a
+                  custom property. This is the same bargain .kb-glow makes in
+                  the Skills section: no filter, no backdrop-filter, nothing a
+                  scroll can force the compositor to re-blur.
+
+   There was a third — a frosted card naming each project as its planet swung
+   in. Selected Work introduces the same six projects a screen later, as
+   planets you can actually open, so the card and the planets it described
+   both went. Nothing on this layer is frosted any more, which means nothing
+   here can re-trigger a backdrop-filter at all.
+
+   COLOUR. The scene's gold is the reference's #b8892b, kept as is in
+   satelliteScene.js. Everything in this file uses the site's own brass
+   tokens instead of restating that hex, so no second gold enters the
+   stylesheet — gold stays one accent, defined in one place.
+
+   Z-INDEX. Above <main> (z-index 1) and below .fx-grain (40) and .fx-cursor
+   (60), so the satellite reads over the hero it is flying out of but never
+   over the page's own chrome. pointer-events are off on every layer: this is
+   scenery, and everything underneath stays clickable.
+   ========================================================================== */
+
+.sat {
+  position: fixed;
+  inset: 0;
+  z-index: 2;
+  pointer-events: none;
+  /* Written by the render loop. It reaches 0 just as Selected Work arrives,
+     so the satellite is gone before the planet system is on screen rather
+     than painting over it. */
+  opacity: var(--sat-fade, 1);
+}
+
+.sat-canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.9s ease;
+}
+.sat-canvas.is-ready { opacity: 1; }
+
+/* ---- the bloom ----------------------------------------------------------- *
+   Deliberately no mix-blend-mode. .sat is a stacking context, so a blend mode
+   here would blend with the transparent canvas above it rather than with the
+   page, and cost a compositing pass for nothing. Two plain radial gradients
+   at low alpha read as the same light and cost a paint.
+
+   --sat-glow-x follows the satellite: it sits in the column the keyboard used
+   to occupy on wide screens and eases back to centre as the flight starts.  */
+.sat-glow {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: var(--sat-glow, 0);
+  background:
+    radial-gradient(
+      40vmax 32vmax at var(--sat-glow-x, 50%) 46%,
+      rgba(var(--brass-lit), 0.16),
+      transparent 66%
+    ),
+    radial-gradient(
+      17vmax 15vmax at var(--sat-glow-x, 50%) 46%,
+      rgba(var(--brass-lit), 0.14),
+      transparent 70%
+    );
+  will-change: opacity;
+}
+
+/* ==========================================================================
+   Reduce motion — the satellite is shown whole and nothing flies.
+
+   useSatelliteFlight.js renders one frame at progress 0 and never binds the
+   scroll, so there is no fly-in. What is left to do here is get the fixed
+   canvas out of the way once the hero is behind you, which is one class and
+   one fade, and hold the bloom at a constant value instead of animating it.
+   ========================================================================== */
+@media (prefers-reduced-motion: reduce) {
+  .sat {
+    transition: opacity 0.4s ease;
+  }
+  .sat.is-parked {
+    opacity: 0;
+    visibility: hidden;
+  }
+  .sat-canvas { transition: none; }
+  .sat-glow { opacity: 0.3; }
+}

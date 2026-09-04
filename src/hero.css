@@ -48,7 +48,32 @@
   --my: 0;
 }
 
+/* ---- the runway ---------------------------------------------------------- *
+   A tall block of scroll with the hero stuck inside it. The block is the
+   satellite's timeline: the object comes apart over the first half and
+   recedes over the second, all of it over the hero's own background instead
+   of over another section's content.
+
+   Height is in viewport units so the runway scales with the screen rather
+   than being a fixed pixel budget that runs out on a laptop. It is one
+   viewport longer than the flight needs, and that last viewport is the
+   release: the stage unsticks and slides away as Selected Work rises behind
+   it.
+
+   The flight measures itself from this block's top to Selected Work's top —
+   see readProgress() in useSatelliteFlight.js — so changing this height
+   changes the pace of the whole flight, and nothing else has to follow.    */
+.hero-runway {
+  position: relative;
+  height: 500vh;
+}
+
 .hero {
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  height: 100dvh;
+  min-height: 0; /* .sector's 100vh floor would fight the sticky height */
   padding: 0; /* hero.html manages its own gutters through --pad */
 }
 .hero ::selection { background: var(--brass); color: #000; }
@@ -205,22 +230,59 @@
 .hero-nav a:hover,
 .hero-nav a:focus-visible { color: var(--brass); border-bottom-color: var(--brass); }
 
-/* ---- the grid ------------------------------------------------------------ */
+/* ---- the grid ------------------------------------------------------------ *
+   --hero-fade is written by the flight (see useSatelliteFlight.js) and is the
+   reference's `1 - progress * 2.4`: the copy is clear by the time the
+   satellite is halfway apart. It matters because the hero is stuck to the top
+   of its runway and no longer scrolls away on its own — without it the solar
+   cells fly out across the headline and stay there.
+
+   .is-flying lands once the fade reaches zero and takes the copy out of the
+   tab order. Opacity alone would leave three invisible focusable links behind
+   the satellite. The top bar is deliberately not in here: it carries the only
+   navigation on the page and stays legible the whole way down, the same way
+   the reference keeps its HUD.                                              */
+.hero-grid,
+.hero .sector-hint {
+  opacity: var(--hero-fade, 1);
+}
+.is-flying .hero-grid,
+.is-flying .hero .sector-hint {
+  visibility: hidden;
+}
+
+/* Two nested boxes, not one grid, and the split is what puts the object's
+   caption on the same line as the contact links.
+
+   .hero-grid is a full-height flex box that centres one block in the viewport.
+   .hero-cols is that block: the two columns, sized by their own content and
+   bottom-aligned. Because the columns end together, the caption lands on the
+   links' line by construction rather than by a hand-tuned offset that would
+   drift the moment the copy or the clamped type changed size.
+
+   A single grid could not do this: it was 100svh tall with align-items:center,
+   so `end` meant the bottom of the viewport, not the bottom of the copy. */
 .hero-grid {
   position: relative;
   z-index: 5;
   flex: 1;
   min-height: 100svh;
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1.05fr);
+  display: flex;
   align-items: center;
-  gap: clamp(1.5rem, 4vw, 3.5rem);
   padding: 0 var(--pad);
   max-width: 1500px;
   margin: 0 auto;
   width: 100%;
 }
-.hero-grid > * { min-width: 0; }
+
+.hero-cols {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.05fr);
+  align-items: end;
+  gap: clamp(1.5rem, 4vw, 3.5rem);
+  width: 100%;
+}
+.hero-cols > * { min-width: 0; }
 .hero-left { max-width: 40rem; min-width: 0; }
 
 .reveal { overflow: hidden; display: block; }
@@ -268,27 +330,6 @@
   color: var(--bone);
 }
 
-.hero-blurb {
-  margin: clamp(1.1rem, 2.4vw, 1.7rem) 0 0;
-  max-width: 44ch;
-  color: var(--steel);
-  font-size: clamp(0.95rem, 1.15vw, 1.05rem);
-  line-height: 1.65;
-  opacity: 0;
-  transition: opacity 1s var(--ease) 0.35s;
-}
-.is-loaded .hero-blurb { opacity: 1; }
-
-.hero-blurb-mark {
-  display: block;
-  margin-bottom: 0.5rem;
-  font-family: var(--f-mono);
-  font-size: 0.68rem;
-  letter-spacing: 0.18em;
-  text-transform: uppercase;
-  color: var(--ink-3);
-}
-
 /* ---- contact links ------------------------------------------------------- *
    Plain links in a row, as sketched, rather than the button cluster.        */
 .hero-links {
@@ -319,28 +360,32 @@
 .hero-links a:hover,
 .hero-links a:focus-visible { color: var(--brass); border-bottom-color: var(--brass); }
 
-/* ---- the board ----------------------------------------------------------- */
-.hero-board {
+/* ---- the object ---------------------------------------------------------- *
+   The satellite renders on a fixed, page-wide canvas (satellite.css), so this
+   column holds no canvas of its own any more — it holds the space the object
+   flies in and the caption under it. Keeping the column is what stops the
+   headline from stretching across the full width and sitting behind the
+   satellite; satelliteScene.js offsets the scene into this same half on wide
+   screens, and lifts it above the copy once the grid collapses to one column.
+
+   Sized to the height the board canvas used, so the hero's proportions and
+   the caption's baseline are exactly where they were.                       */
+.hero-object {
   position: relative;
   margin: 0;
   justify-self: stretch;
-  align-self: center;
   display: flex;
   flex-direction: column;
+  justify-content: flex-end;
+  /* No min-height. It used to reserve the board canvas's height, but the
+     satellite renders on a fixed page-wide canvas and never needed the box —
+     and any height here would have pushed the caption off the links' line,
+     which is the whole point of .hero-cols aligning to `end`. */
   opacity: 0;
   transform: translateY(24px);
   transition: 0.9s var(--ease) 0.45s;
 }
-.is-loaded .hero-board { opacity: 1; transform: none; }
-
-.hero-board-canvas {
-  display: block;
-  width: 100%;
-  height: clamp(280px, 46vh, 520px);
-  opacity: 0;
-  transition: opacity 0.9s ease;
-}
-.hero-board-canvas.is-ready { opacity: 1; }
+.is-loaded .hero-object { opacity: 1; transform: none; }
 
 .hero-board-label {
   display: flex;
@@ -362,19 +407,58 @@
 .hero-board-label .v { color: var(--ink-dim); }
 
 @media (max-width: 900px) {
+  /* Shorter runway on a phone, where a scroll of the same length in viewports
+     is a much longer thumb journey. Same ratio the teardown block used. */
+  .hero-runway { height: 400vh; }
   .hero-grid {
-    grid-template-columns: 1fr;
     padding-top: 132px;
     padding-bottom: 80px;
-    gap: clamp(2rem, 6vw, 3rem);
   }
-  .hero-board-canvas { height: clamp(230px, 34vh, 340px); }
+  /* One column, and the order flips. Side by side the caption sits on the
+     links' line; stacked there is no line to sit on, and the copy takes the
+     full width the satellite was flying in. So the object goes first: its box
+     reserves the top of the screen for the satellite, the caption sits at the
+     bottom of that box as a label under it, and the copy follows underneath.
+
+     The reserved height and the lift in satelliteScene.js resize() are two
+     halves of one measurement. Change one and check the other, or the
+     satellite lands on the headline. */
+  .hero-cols {
+    grid-template-columns: 1fr;
+    align-items: start;
+    gap: clamp(1.25rem, 4vw, 2rem);
+  }
+  .hero-object {
+    grid-row: 1;
+    min-height: clamp(230px, 34vh, 340px);
+    justify-content: flex-end;
+  }
+  .hero-left { grid-row: 2; }
   .hero-top { gap: 0.6rem 1.5rem; }
   .hero-nav ul { gap: 1.1rem; }
 }
 
-/* Carried over from hero.html unchanged. */
+/* Carried over from hero.html unchanged, plus the runway. */
 @media (prefers-reduced-motion: reduce) {
+  /* No flight means nothing is using the runway, and five viewports of empty
+     scroll is worse than no animation at all. The hero collapses back to one
+     screen and the page reads straight through — which is what "reveal the
+     sections normally" has to mean here. */
+  .hero-runway { height: auto; }
+  .hero {
+    position: relative;
+    height: auto;
+    min-height: 100vh;
+    min-height: 100dvh;
+  }
+  /* No flight means nothing writes --hero-fade, but pin it anyway so the copy
+     can never end up faded by a stale value. */
+  .hero-grid,
+  .hero .sector-hint {
+    opacity: 1;
+    visibility: visible;
+  }
+
   /* Written as .aurora .gN, not hero.html's .aurora i. The blobs are styled
      through .aurora .g1 etc, so a type selector loses on specificity and the
      aurora kept animating - the rule was there in the original but never took
@@ -386,9 +470,8 @@
   .hero-role { animation: none; }
   .reveal > *,
   .hero-role,
-  .hero-blurb,
   .hero-links,
-  .hero-board {
+  .hero-object {
     opacity: 1;
     transform: none;
     transition: none;
