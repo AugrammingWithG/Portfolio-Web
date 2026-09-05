@@ -4,9 +4,9 @@ import App from "./App.jsx";
 import "./styles.css";
 import "./hud.css";
 import "./hero.css";
-import "./teardown.css";
-import "./skills-keyboard.css";
+import "./satellite.css";
 import "./selected-work.css";
+import "./skills-keyboard.css";
 
 createRoot(document.getElementById("root")).render(
   <React.StrictMode>

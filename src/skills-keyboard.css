@@ -15,6 +15,17 @@
 /* The section shell, brackets, HUD header and hint all come from hud.css.
    This file is the board, the readout panel and the wire between them. */
 
+/* Skills sits below Selected Work now, not above it, so it opens on 0.58 —
+   the value Selected Work closes with — and hands 0.52 to the footer. It
+   lifts a little through its middle because it is the step back up out of the
+   deepest ground on the site. See the handoff rule in hud.css before touching
+   these; the hud.css defaults were written for its old position. */
+.kb .sector-scrim {
+  --scrim-top: 0.58;
+  --scrim-mid: 0.5;
+  --scrim-bottom: 0.52;
+}
+
 /* The HUD meta sits next to the label rather than opposite it, so the mute
    button can take the far edge on its own. */
 .kb .sector-hud-meta {

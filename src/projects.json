@@ -1,0 +1,85 @@
+{
+  "projects": [
+    {
+      "id": "gourmet-getaway-tours",
+      "name": "Gourmet Getaway Tours",
+      "tagline": "Chef-led Hunter Valley food and wine tours, for an Australian client.",
+      "status": "live",
+      "liveUrl": "https://www.gourmetgetawaytours.com.au/",
+      "role": "Full-Stack Developer & SEO",
+      "problem": "The client needed a booking flow that actually converts and a site people could find on search.",
+      "whatIBuilt": "I built the site end to end, both the customer-facing pages and the booking logic behind them, and moved reservations onto a more reliable booking platform so the flow was smoother. I also handled on-page SEO.",
+      "result": "More completed bookings, more new customers, and higher search visibility.",
+      "stack": ["TypeScript"],
+      "images": ["ggt-home.png", "ggt-tours.png"],
+      "leadImage": "ggt-home.png"
+    },
+    {
+      "id": "oxilia",
+      "name": "Oxilia",
+      "tagline": "An all-in-one workspace where a team chats, plans, and runs projects in one place.",
+      "status": "in-use",
+      "liveUrl": null,
+      "role": "Full-Stack Developer",
+      "problem": "The team was spread across separate tools for messaging, scheduling, and tracking work.",
+      "whatIBuilt": "I built full-stack features for a single app that brings it together: team chat with channels and direct messages, a shared calendar, project boards, a CRM, video calls, and a visual view of the whole development cycle from request to handoff.",
+      "result": "Shipped to production and now the team's daily tool, with a mobile version being prepped for the Play Store.",
+      "stack": ["React", "Node.js"],
+      "images": ["oxilia-workspace.png", "oxilia-dev-cycle.png"],
+      "leadImage": "oxilia-workspace.png",
+      "note": "Blur teammate names and chat text in oxilia-workspace.png before publishing."
+    },
+    {
+      "id": "mealplanner",
+      "name": "MealPlanner",
+      "tagline": "A meal-planning and nutrition app, built end to end for a client.",
+      "status": "in-use",
+      "liveUrl": null,
+      "platform": "mobile",
+      "role": "Full-Stack Mobile Developer",
+      "problem": "The client wanted to plan meals and track nutrition while keeping their data private.",
+      "whatIBuilt": "I built the full app and its data layer: a dashboard with calories and macros, a meal planner, recipes, a grocery list, and water, exercise, and weight trackers. Daily nutrient goals follow the Philippine national nutrition standards, and the data stays on the phone, with only login going online.",
+      "result": "Live and in active daily use.",
+      "stack": ["React Native"],
+      "images": ["mealplanner-menu.png", "mealplanner-dashboard.png", "mealplanner-meals.png", "mealplanner-trackers.png"],
+      "leadImage": "mealplanner-dashboard.png"
+    },
+    {
+      "id": "tingi-station",
+      "name": "Tingi Station",
+      "tagline": "A neighborhood refill store where you buy staples by the gram, not by the pack.",
+      "status": "live",
+      "liveUrl": "https://tingistation.com/",
+      "role": "Shopify Developer",
+      "problem": "The store needed an online presence that matched its buy-only-what-you-need idea and made shopping easy.",
+      "whatIBuilt": "I overhauled the storefront's design and smoothed the whole flow from browsing collections to checkout, including a playful touch where you tap a jar to \"fill\" it.",
+      "result": "Live and serving a high volume of shoppers.",
+      "stack": ["Shopify"],
+      "images": ["tingi-hero.png", "tingi-how-it-works.png"],
+      "leadImage": "tingi-hero.png"
+    },
+    {
+      "id": "aicore",
+      "name": "AiCore",
+      "tagline": "An offline desktop tool for forensic teams that rebuilds a scene in 3D from scans.",
+      "status": "beta",
+      "liveUrl": null,
+      "platform": "desktop",
+      "role": "Frontend Developer",
+      "problem": "Raw 3D scan data is messy and hard to read, and this has to hold up in a courtroom.",
+      "whatIBuilt": "I built the frontend and the interactive 3D viewer that turns raw scan data into a clean, navigable model you can move around and measure.",
+      "result": "A production build now in beta testing with forensic teams.",
+      "stack": ["React", "3D web tools"],
+      "images": [],
+      "leadImage": null,
+      "note": "Visual pending: recording a before/after of the 3D reconstruction. Slot in when ready."
+    }
+  ],
+  "onHold": [
+    {
+      "id": "socialhat",
+      "name": "SocialHat",
+      "reason": "Under development. Hold until further along."
+    }
+  ]
+}

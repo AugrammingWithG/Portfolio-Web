@@ -1,6 +1,6 @@
 export const CONTACT = {
   name: "Augniña Krizzel Reburiano",
-  role: "Full-Stack Developer & Creative Technologist",
+  role: "Full-Stack Developer",
   location: "Baguio City, Philippines",
   email: "reburianonina@gmail.com",
   github: "https://github.com/AugrammingWithG",

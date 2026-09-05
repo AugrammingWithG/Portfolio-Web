@@ -1,0 +1,301 @@
+/* ==========================================================================
+   SATELLITE — the hero object's layers.
+
+   Two stacked layers, and the reason they are separate is performance:
+
+     .sat-canvas  transparent WebGL. The hero's background (.hero-fx — the
+                  aurora, the milky way, the flow field) is untouched and
+                  shows straight through it. Nothing here paints a ground.
+     .sat-glow    the gold bloom. A painted gradient whose only animated
+                  property is opacity, written from the render loop as a
+                  custom property. This is the same bargain .kb-glow makes in
+                  the Skills section: no filter, no backdrop-filter, nothing a
+                  scroll can force the compositor to re-blur.
+
+   There was a third — a frosted card naming each project as its planet swung
+   in. Selected Work introduces the same six projects a screen later, as
+   planets you can actually open, so the card and the planets it described
+   both went. Nothing on this layer is frosted any more, which means nothing
+   here can re-trigger a backdrop-filter at all.
+
+   COLOUR. The scene's gold is the reference's #b8892b, kept as is in
+   satelliteScene.js. Everything in this file uses the site's own brass
+   tokens instead of restating that hex, so no second gold enters the
+   stylesheet — gold stays one accent, defined in one place.
+
+   Z-INDEX. Above <main> (z-index 1) and below .fx-grain (40) and .fx-cursor
+   (60), so the satellite reads over the hero it is flying out of but never
+   over the page's own chrome. pointer-events are off on every layer: this is
+   scenery, and everything underneath stays clickable.
+   ========================================================================== */
+
+/* The wrapper. It exists so the object and its captions leave together on one
+   opacity, and so the aria-hidden can sit on the two children instead of the
+   parent — the captions are hidden from assistive tech because Hero.jsx
+   states the same five steps in the right place in the document. */
+.sat-layer {
+  position: fixed;
+  inset: 0;
+  z-index: 2;
+  pointer-events: none;
+  /* Written by the render loop. It reaches 0 just as Selected Work arrives,
+     so the satellite is gone before the planet system is on screen rather
+     than painting over it. */
+  opacity: var(--sat-fade, 1);
+}
+
+.sat {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.sat-canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.9s ease;
+}
+.sat-canvas.is-ready { opacity: 1; }
+
+/* ---- the bloom ----------------------------------------------------------- *
+   Deliberately no mix-blend-mode. .sat is a stacking context, so a blend mode
+   here would blend with the transparent canvas above it rather than with the
+   page, and cost a compositing pass for nothing. Two plain radial gradients
+   at low alpha read as the same light and cost a paint.
+
+   --sat-glow-x follows the satellite: it sits in the column the keyboard used
+   to occupy on wide screens and eases back to centre as the flight starts.  */
+.sat-glow {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: var(--sat-glow, 0);
+  background:
+    radial-gradient(
+      40vmax 32vmax at var(--sat-glow-x, 50%) 46%,
+      rgba(var(--brass-lit), 0.16),
+      transparent 66%
+    ),
+    radial-gradient(
+      17vmax 15vmax at var(--sat-glow-x, 50%) 46%,
+      rgba(var(--brass-lit), 0.14),
+      transparent 70%
+    );
+  will-change: opacity;
+}
+
+/* ==========================================================================
+   Reduce motion — the satellite is shown whole and nothing flies.
+
+   useSatelliteFlight.js renders one frame at progress 0 and never binds the
+   scroll, so there is no fly-in. What is left to do here is get the fixed
+   canvas out of the way once the hero is behind you, which is one class and
+   one fade, and hold the bloom at a constant value instead of animating it.
+   ========================================================================== */
+@media (prefers-reduced-motion: reduce) {
+  .sat-layer {
+    transition: opacity 0.4s ease;
+  }
+  .sat-layer.is-parked {
+    opacity: 0;
+    visibility: hidden;
+  }
+  .sat-canvas { transition: none; }
+  .sat-glow { opacity: 0.3; }
+
+  /* The flight is never bound, so no caption would ever fade in — they would
+     sit at zero for the whole page. The readable version of the same five
+     steps is .hero-process in hero.css, which this mode turns on. */
+  .sat-notes { display: none; }
+}
+
+
+/* ==========================================================================
+   THE TEARDOWN CAPTIONS — "how I build", annotated onto the satellite.
+
+   The same device cre8tivesync.online uses on its exploded card: a caption
+   parked in the margin with a thin leader line running to the piece it is
+   talking about. The line is the entire point. Without it these are five
+   labels floating near an object; with it they are pointing at it, and the
+   object coming apart is carrying the copy rather than decorating it.
+
+   WHAT MOVES AND WHAT DOES NOT. --sx/--sy are the line's origin, written once
+   as inline styles from process.js — the caption never moves, which is what
+   keeps it readable while the thing it points at is flying across the screen.
+   --len, --ang and --o are written every frame by useSatelliteFlight.js from
+   the anchor's projected position. Three custom properties per live caption,
+   and a caption that is off costs one write and then nothing.
+
+   .sat-note is a ZERO-SIZED POINT at the origin. Both children hang off it,
+   so none of the geometry depends on how long a label happens to be — that
+   was the alternative, measuring the text box every frame, and it would have
+   put a layout read in the render loop.
+
+   opacity and transform only. Nothing here blurs a backdrop, in keeping with
+   the rest of this layer.
+   ========================================================================== */
+
+.sat-notes {
+  position: absolute;
+  inset: 0;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  pointer-events: none;
+}
+
+.sat-note {
+  position: absolute;
+  left: var(--sx);
+  top: var(--sy);
+  width: 0;
+  height: 0;
+  opacity: var(--o, 0);
+  will-change: opacity;
+}
+
+/* The leader line. Rotated about its own left end, which is the origin, so
+   one length and one angle aim it anywhere on the screen.
+
+   IT FADES, BUT NOT TO NOTHING. The first version ran 0.5 -> 0.12 alpha on the
+   reasoning that the far end should not compete with the geometry it crosses.
+   Sampled along its own path against the bare ground underneath, that end was
+   arriving at a delta of 7 RGB - a line that stops pointing at anything about
+   two thirds of the way along, which is the one job it has. 0.62 -> 0.34 keeps
+   the taper and keeps the tip visible over the brass. Re-measure if you touch
+   it; over this wash the far end is not something you can judge by looking. */
+.sat-note-line {
+  position: absolute;
+  left: 0;
+  top: 0;
+  display: block;
+  height: 1px;
+  width: var(--len, 0);
+  transform-origin: 0 50%;
+  transform: rotate(var(--ang, 0deg));
+  background: linear-gradient(
+    to right,
+    rgba(var(--brass-lit), 0.62),
+    rgba(var(--brass-lit), 0.34)
+  );
+}
+
+/* The tack where the line meets the caption. A circle, so the rotation it
+   inherits from the line does not show. */
+.sat-note-line::before {
+  content: "";
+  position: absolute;
+  left: -2.5px;
+  top: -2.5px;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--gold);
+}
+
+/* The target. A ring on the part the line is pointing at - the line alone
+   tapers out over a bright ground, and a callout that ends in nothing reads
+   as a stray hairline. Circular, so the rotation it inherits does not show. */
+.sat-note-line::after {
+  content: "";
+  position: absolute;
+  left: 100%;
+  top: -4px;
+  margin-left: -4px;
+  width: 9px;
+  height: 9px;
+  border: 1px solid rgba(var(--brass-lit), 0.8);
+  border-radius: 50%;
+}
+
+/* THE PLATE IS NOT DECORATION. Measured against the real ground, bare text
+   here failed badly: the aurora and the gold current are both animated and
+   the satellite own lit parts drift behind the captions, so the contrast
+   ratio was not merely low but unstable - 6.06 on one sample of step 01 and
+   4.12 on another, and step 03 bottomed out at 1.00, with a third of the
+   text ground brighter than the text itself, when a gold solar cell passed
+   under it. Nothing you can do to the foreground survives a background that
+   bright: the only fix is to stop the ground being arbitrary.
+
+   0.82 alpha is derived, not picked. Compositing that over the brightest
+   thing that can pass behind a caption - a lit gold cell - lands the ground
+   near L 0.03, which holds the body copy above 10:1 and the gold step number
+   above 6:1. Lower it and the worst case comes back; it is the bright frames
+   that set this number, not the average one.
+
+   Still no backdrop-filter. This is a painted rectangle, not a frosted one,
+   so the bargain the rest of this layer makes is intact and a scroll cannot
+   force a re-blur. */
+.sat-note-tx {
+  position: absolute;
+  top: 0;
+  transform: translateY(-50%);
+  width: max-content;
+  max-width: min(21vw, 17rem);
+  padding: 0.42rem 0.72rem;
+  border: 1px solid var(--glass-line);
+  border-radius: 8px;
+  background:
+    linear-gradient(rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0.015)),
+    rgba(10, 8, 5, 0.82);
+  font-family: var(--mono);
+  font-size: 0.72rem;
+  line-height: 1.55;
+  letter-spacing: 0.01em;
+  color: var(--ink);
+  text-shadow: 0 1px 2px rgba(8, 6, 3, 0.8);
+}
+
+.sat-note-tx b {
+  font-weight: 500;
+  color: var(--gold);
+  letter-spacing: 0.14em;
+  margin-right: 0.65em;
+}
+
+/* Which way the text hangs off the origin. It always goes OUTWARD, away from
+   the object, so the leader line never runs back under its own caption. The
+   anchors in process.js are chosen to match — see the cell tag in
+   satelliteScene.js, which is on the far side for exactly this reason. */
+.sat-note--right .sat-note-tx {
+  left: 0;
+  margin-left: 0.9rem;
+}
+.sat-note--left .sat-note-tx {
+  right: 0;
+  margin-right: 0.9rem;
+  text-align: right;
+}
+
+/* ---- narrow screens ------------------------------------------------------ *
+   There are no margins to park a caption in, and the satellite is centred and
+   scaled down to fit (see resize() in satelliteScene.js), so a leader line
+   would have nowhere to travel. The captions become one centred line low on
+   the screen instead, still sequenced by the same windows — the steps survive,
+   the pointing does not.                                                     */
+@media (max-width: 900px) {
+  .sat-note {
+    left: 50%;
+    top: auto;
+    bottom: 12vh;
+    width: 0;
+  }
+  .sat-note-line { display: none; }
+  .sat-note-tx,
+  .sat-note--left .sat-note-tx,
+  .sat-note--right .sat-note-tx {
+    left: 50%;
+    right: auto;
+    transform: translate(-50%, -50%);
+    margin: 0;
+    max-width: min(78vw, 22rem);
+    text-align: center;
+    font-size: 0.68rem;
+  }
+  .sat-note-tx b { display: block; margin: 0 0 0.15rem; }
+}

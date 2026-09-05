@@ -1,7 +1,7 @@
 import React, { useRef } from "react";
 import Hero from "./Hero.jsx";
+import SatelliteHero from "./SatelliteHero.jsx";
 import usePointerFx from "./usePointerFx.js";
-import Teardown from "./Teardown.jsx";
 import SkillsKeyboard from "./SkillsKeyboard.jsx";
 import SelectedWork from "./SelectedWork.jsx";
 import Footer from "./Footer.jsx";
@@ -36,11 +36,21 @@ export default function App() {
         <div className="ring" />
       </div>
 
+      {/* The hero's object. Out here rather than inside <Hero> for the same
+          reason .fx-grain and .fx-cursor are: it is fixed and spans the page.
+          The flight runs from the hero to Selected Work, so it has to outlive
+          the section it starts in. Transparent canvas — the hero background
+          underneath it is untouched. */}
+      <SatelliteHero />
+
+      {/* Selected Work follows the hero directly: the satellite's flight ends
+          on its first planet, and this is where it hands over to the real
+          ones. Skills sits after it. The teardown section used to run between
+          the two — the satellite took over that job, and it is gone. */}
       <main id="main">
         <Hero />
-        <Teardown />
-        <SkillsKeyboard />
         <SelectedWork />
+        <SkillsKeyboard />
       </main>
 
       <Footer />

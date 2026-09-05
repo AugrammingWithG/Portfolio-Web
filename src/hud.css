@@ -52,11 +52,16 @@
    The fix is that every section hands its neighbour the precise alpha that
    neighbour opens with. The chain, top of page to bottom:
 
-       hero      0.00 -> 0.05 -> 0.28
-       teardown  0.28 -> 0.30 -> 0.28
-       skills    0.28 -> 0.33 -> 0.50
+       hero      0.16 -> 0.29 -> 0.50
        work      0.50 -> 0.78 -> 0.58
-       contact   0.58 -> 0.52 -> 0.52
+       skills    0.58 -> 0.50 -> 0.52
+       contact   0.52 -> 0.52 -> 0.52
+
+   The teardown section used to sit between hero and skills and is gone; the
+   satellite's flight replaced it, and the hero now hands straight to Selected
+   Work. Skills moved below Selected Work at the same time, so its own top and
+   bottom were re-cut to fit its new neighbours. Every value in the chain
+   above moved as a consequence — that is the rule working, not drift.
 
    Change any bottom value and you MUST change the next section's top to match,
    or the seam comes back. Only the middle of a section is free.

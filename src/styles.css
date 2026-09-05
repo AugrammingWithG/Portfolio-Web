@@ -226,13 +226,14 @@ main {
    0.28 at the bottom, which is what Skills opens with. See the handoff rule in
    hud.css before touching these numbers. */
 /* The scrim was near-zero while the hero copy had 8:1 of headroom. The new
-   layout puts body text and the board caption over the brightest part of the
-   wash, so it earns a real value again. Still closes on 0.28, which is what
-   Teardown opens with — see the handoff rule in hud.css. */
+   layout puts body text and the satellite's caption over the brightest part
+   of the wash, so it earns a real value again. Now closes on 0.50, which is
+   what Selected Work opens with — the hero hands straight to it since the
+   teardown section came out. See the handoff rule in hud.css. */
 .hero .sector-scrim {
   --scrim-top: 0.16;
   --scrim-mid: 0.29;
-  --scrim-bottom: 0.28;
+  --scrim-bottom: 0.5;
 }
 
 /* ---------------------------------------------------------------
@@ -281,10 +282,11 @@ main {
 /* No border-top. The old hairline was a second divider stacked on the tonal
    one, and the whole point here is that sections meet without a line. */
 
-/* Opens on 0.58, which is what Selected Work closes with, then holds nearly
-   flat to the end of the page. */
+/* Opens on 0.52, which is what Skills now closes with — Skills sits between
+   Selected Work and the footer since the reorder — then holds flat to the end
+   of the page. */
 .ft .sector-scrim {
-  --scrim-top: 0.58;
+  --scrim-top: 0.52;
   --scrim-mid: 0.52;
   --scrim-bottom: 0.52;
 }
