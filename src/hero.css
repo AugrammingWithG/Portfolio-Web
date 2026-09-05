@@ -477,3 +477,78 @@
     transition: none;
   }
 }
+
+
+/* ==========================================================================
+   HOW I BUILD — the readable copy of the satellite's teardown captions.
+
+   The annotated version lives on .sat-notes (satellite.css) and is aria-hidden.
+   This is the same five steps from the same file, in the document where they
+   belong. Off screen by default: with the flight running, the satellite is
+   already saying this a caption at a time, and printing it here as well would
+   put the same copy on screen twice.
+
+   Reduced motion is the case this exists for. The flight is never bound in
+   that mode — one frame at progress 0, no fly-in — so not one caption would
+   ever fade in, and the steps would be visible to a screen reader and to
+   nobody else. Here they become the object's own caption block instead.
+   ========================================================================== */
+
+.hero-process {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hero-process {
+    position: static;
+    width: auto;
+    height: auto;
+    margin: 0;
+    overflow: visible;
+    clip: auto;
+    white-space: normal;
+  }
+
+  .hero-process-head {
+    margin: 0 0 0.55rem;
+    font-family: var(--f-mono);
+    font-size: 0.64rem;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--ink-dim);
+  }
+  .hero-process-head::before { content: "// "; opacity: 0.5; }
+
+  .hero-process-list {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    counter-reset: step;
+    display: grid;
+    gap: 0.3rem;
+    font-family: var(--f-mono);
+    font-size: 0.7rem;
+    line-height: 1.5;
+    color: var(--bone);
+  }
+  .hero-process-list li {
+    counter-increment: step;
+    display: flex;
+    gap: 0.65em;
+  }
+  /* Same 01..05 the annotated captions print, from a counter rather than a
+     second copy of the number — process.js already holds it once. */
+  .hero-process-list li::before {
+    content: "0" counter(step);
+    color: var(--gold, #d0a44c);
+    letter-spacing: 0.14em;
+  }
+}

@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from "react";
 import { CONTACT } from "./links.js";
+import { PROCESS } from "./process.js";
 import useFlowField from "./useFlowField.js";
 
 /* Top-right navigation. Same three links, in the order the page now runs:
@@ -128,6 +129,27 @@ export default function Hero() {
                 fold. What stays is the caption, which sits on the contact
                 links' line. */}
             <figure className="hero-object">
+              {/* The five build steps the satellite is annotated with as it
+                  comes apart. The captions out on .sat-notes are aria-hidden
+                  and this is the readable copy of them, here rather than in
+                  SatelliteHero because that layer is mounted above <main> and
+                  would announce a build process before her name.
+
+                  Hidden by default — on screen the satellite is already
+                  saying this, and saying it twice is clutter. Reduced motion
+                  reveals it: the flight is never bound in that mode, so the
+                  annotated version never plays and this is the only place the
+                  steps appear at all. Both read process.js; edit the copy
+                  there. */}
+              <div className="hero-process">
+                <p className="hero-process-head">How I build</p>
+                <ol className="hero-process-list">
+                  {PROCESS.map((step) => (
+                    <li key={step.n}>{step.label}</li>
+                  ))}
+                </ol>
+              </div>
+
               <figcaption className="hero-board-label">
                 <span className="k">The satellite</span>
                 {/* No count any more: the flight used to land six planets here

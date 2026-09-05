@@ -28,6 +28,8 @@
    bundle and arrives as its own chunk.
    ========================================================================== */
 
+import { PROCESS } from "./process.js";
+
 const GOLD = 0xb8892b; // the site's one accent, and the reference's
 const GOLD_HI = 0xe0a838;
 
@@ -52,6 +54,16 @@ function rng(seed) {
    last stretch is the approach — the hero's own sky, and then Selected Work
    rising into it. */
 const HALF = 0.5;
+
+/* How long a step's caption spends fading in and out, in progress units. The
+   windows in process.js overlap by about this much, so one step is always
+   handing over to the next instead of the margin blinking empty. */
+const NOTE_FADE = 0.06;
+
+function windowAlpha(p, a, b) {
+  if (p <= a || p >= b) return 0;
+  return ease(Math.min(clamp01((p - a) / NOTE_FADE), clamp01((b - p) / NOTE_FADE)));
+}
 
 export async function createScene(canvas) {
   const THREE = await import("three");
@@ -191,9 +203,14 @@ export async function createScene(canvas) {
   /* ---- satellite --------------------------------------------------------- */
   const sat = new THREE.Group();
   const parts = [];
+  /* Tagged parts, for the annotation layer to point at. Only the five named
+     in process.js are in here; everything else is scenery and is never looked
+     up. A tag that does not resolve parks its note at zero opacity rather
+     than throwing — see the projection at the foot of update(). */
+  const anchors = new Map();
   world.add(sat);
 
-  function addPart(mesh, rest, apart) {
+  function addPart(mesh, rest, apart, tag) {
     mesh.position.copy(rest.p);
     if (rest.r) mesh.rotation.copy(rest.r);
     mesh.userData = {
@@ -204,6 +221,7 @@ export async function createScene(canvas) {
     };
     sat.add(mesh);
     parts.push(mesh);
+    if (tag) anchors.set(tag, mesh);
   }
 
   {
@@ -212,17 +230,20 @@ export async function createScene(canvas) {
     addPart(
       new THREE.Mesh(new THREE.BoxGeometry(2.1, 0.5, 1.6), matDark),
       { p: V(0, 0.28, 0) },
-      { p: V(0, 1.7, 0), r: E(0, 0.3, 0) }
+      { p: V(0, 1.7, 0), r: E(0, 0.3, 0) },
+      "top"
     );
     addPart(
       new THREE.Mesh(new THREE.BoxGeometry(2.1, 0.5, 1.6), matPanel),
       { p: V(0, -0.28, 0) },
-      { p: V(0, -1.7, 0), r: E(0, -0.3, 0) }
+      { p: V(0, -1.7, 0), r: E(0, -0.3, 0) },
+      "base"
     );
     addPart(
       new THREE.Mesh(new THREE.BoxGeometry(1.7, 0.16, 1.25), matGold),
       { p: V(0, 0, 0) },
-      { p: V(0, 0, 0), r: E(0, 0.6, 0) }
+      { p: V(0, 0, 0), r: E(0, 0.6, 0) },
+      "core"
     );
 
     const cols = 3;
@@ -252,7 +273,14 @@ export async function createScene(canvas) {
                 rz * 1.9 + (rand() - 0.5) * 0.6
               ),
               r: E(rand() * 0.6 - 0.3, rand() * 0.8, rand() * 0.6 - 0.3),
-            }
+            },
+            /* One cell carries a note, and it has to be one that ends up on
+               the OPPOSITE side to its caption — step 5 sits in the left
+               margin, so a cell flying out left would drag the leader line
+               back underneath its own text. This one flies out right, which
+               makes the longest line on the page and the only one that
+               crosses the object, which is the whole look. */
+            side === 1 && r === 1 && c === 0 ? "cell" : null
           );
         }
       }
@@ -261,7 +289,8 @@ export async function createScene(canvas) {
     addPart(
       new THREE.Mesh(new THREE.ConeGeometry(0.5, 0.4, 20, 1, true), matDark),
       { p: V(0, 0.9, 0.2), r: E(Math.PI, 0, 0) },
-      { p: V(0, 3.4, 1.2), r: E(Math.PI * 0.7, 0.4, 0) }
+      { p: V(0, 3.4, 1.2), r: E(Math.PI * 0.7, 0.4, 0) },
+      "dish"
     );
     addPart(
       new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.05, 1.2, 8), matGold),
@@ -326,7 +355,18 @@ export async function createScene(canvas) {
      for line; the chase that feeds it lives in useSatelliteFlight.js, so this
      module stays a pure function of progress.                               */
   const tmp = new THREE.Vector3();
-  const state = { glow: 0, glowX: 50, heroFade: 1, p: 0 };
+  const ndc = new THREE.Vector3();
+  /* One slot per step in process.js, mutated in place every frame. x and y are
+     the anchor's position on screen as viewport percentages — where the leader
+     line ENDS. Where it starts is fixed copy in process.js, so only these move.
+     They keep their last position while o is 0; nothing reads them then. */
+  const state = {
+    glow: 0,
+    glowX: 50,
+    heroFade: 1,
+    p: 0,
+    notes: PROCESS.map(() => ({ x: 50, y: 50, o: 0 })),
+  };
 
   function update(e) {
     const cur = clamp01(e);
@@ -360,6 +400,48 @@ export async function createScene(canvas) {
     world.position.set(offsetX * (1 - seg2), offsetY * (1 - seg2 * 0.5), 0);
     world.scale.setScalar(worldScale);
     starMat.opacity = 0.16 + seg2 * 0.34;
+
+    /* ---- the annotation layer ------------------------------------------- *
+       Each step's caption is a fixed point in the margin; the end of its
+       leader line is a real part of the satellite, projected to the screen.
+       That is the whole trick — the line is what makes the label read as
+       pointing AT something rather than floating near it.
+
+       Alphas first, geometry only if something is actually on screen: for the
+       stretch before 0.08 and after 0.76 there is no note up, and projecting
+       five anchors for nobody costs a full matrix walk every frame.
+
+       satFade gates the lot. The parts start dissolving at progress 0.61, and
+       a leader line still pointing confidently at a part that has faded out
+       from under it is the one failure mode this layer has.                 */
+    let live = false;
+    for (let i = 0; i < PROCESS.length; i += 1) {
+      const a = windowAlpha(cur, PROCESS[i].in, PROCESS[i].out) * clamp01(satFade * 2.2);
+      state.notes[i].o = a;
+      if (a > 0.001) live = true;
+    }
+    if (live) {
+      // project() reads camera.matrixWorldInverse, and the parts moved above.
+      // render() would refresh both, but it has not run yet this frame.
+      camera.updateMatrixWorld();
+      world.updateMatrixWorld(true);
+      for (let i = 0; i < PROCESS.length; i += 1) {
+        const slot = state.notes[i];
+        if (slot.o <= 0.001) continue;
+        const mesh = anchors.get(PROCESS[i].anchor);
+        if (!mesh) {
+          slot.o = 0; // an anchor name that does not resolve, rather than a throw
+          continue;
+        }
+        mesh.getWorldPosition(ndc).project(camera);
+        if (ndc.z > 1) {
+          slot.o = 0; // behind the camera: NDC wraps and the line would invert
+          continue;
+        }
+        slot.x = (ndc.x * 0.5 + 0.5) * 100;
+        slot.y = (0.5 - ndc.y * 0.5) * 100;
+      }
+    }
 
     /* What the DOM layers read. Neither goes through React: both are written
        straight onto their element, and both move every frame. */

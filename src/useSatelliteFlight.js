@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { PROCESS } from "./process.js";
 
 /* ==========================================================================
    The satellite's lifecycle and its binding to the page.
@@ -45,7 +46,7 @@ function readProgress() {
   return clamp01((y - start) / span);
 }
 
-export default function useSatelliteFlight(canvasRef, layerRef) {
+export default function useSatelliteFlight(canvasRef, layerRef, notesRef) {
   const [ready, setReady] = useState(false);
   const [reduced, setReduced] = useState(
     () => typeof window !== "undefined" && window.matchMedia("(prefers-reduced-motion: reduce)").matches
@@ -55,6 +56,20 @@ export default function useSatelliteFlight(canvasRef, layerRef) {
     const canvas = canvasRef.current;
     const layer = layerRef.current;
     if (!canvas || !layer) return undefined;
+
+    /* The caption elements, collected once. The list is static — five items
+       straight out of process.js — so there is nothing here for React to
+       re-render, and querying every frame would be five selector runs a frame
+       for a list that cannot change. */
+    const notes = notesRef && notesRef.current ? notesRef.current : null;
+    const items = notes ? Array.from(notes.querySelectorAll(".sat-note")) : [];
+    const lastO = items.map(() => -1);
+
+    /* Leader-line geometry is in pixels, so the viewport has to be on hand.
+       Cached rather than read per frame: innerWidth/innerHeight force layout
+       and neither changes without a resize event. */
+    let vw = window.innerWidth;
+    let vh = window.innerHeight;
 
     const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     setReduced(reduce);
@@ -84,10 +99,48 @@ export default function useSatelliteFlight(canvasRef, layerRef) {
        satellite then paints over a section that is itself a 3D scene. */
     const fadeAt = (p) => 1 - clamp01((p - 0.965) / 0.035);
 
+    /* The captions. Each is pinned at a fixed origin in the margin (--sx/--sy,
+       set once as inline styles in SatelliteHero) and its leader line runs to
+       a moving part of the satellite, which the scene has already projected to
+       viewport percentages. All this does is turn those two points into the
+       length and angle CSS can rotate a 1px rule by.
+
+       A note that is off stays off cheaply: one write to drop it to zero, then
+       nothing until it comes back. Most frames only one or two of the five are
+       live, so this skips the majority of the work. */
+    const writeNotes = (s) => {
+      for (let i = 0; i < items.length; i += 1) {
+        const el = items[i];
+        const slot = s.notes[i];
+        if (!el || !slot) continue;
+
+        const o = slot.o;
+        if (o <= 0.001) {
+          if (lastO[i] !== 0) {
+            el.style.setProperty("--o", "0");
+            lastO[i] = 0;
+          }
+          continue;
+        }
+
+        const step = PROCESS[i];
+        const ox = (step.x / 100) * vw;
+        const oy = (step.y / 100) * vh;
+        const dx = (slot.x / 100) * vw - ox;
+        const dy = (slot.y / 100) * vh - oy;
+
+        el.style.setProperty("--len", Math.round(Math.hypot(dx, dy)) + "px");
+        el.style.setProperty("--ang", ((Math.atan2(dy, dx) * 180) / Math.PI).toFixed(2) + "deg");
+        el.style.setProperty("--o", o.toFixed(3));
+        lastO[i] = o;
+      }
+    };
+
     const write = (s, fade) => {
       layer.style.setProperty("--sat-glow", s.glow.toFixed(3));
       layer.style.setProperty("--sat-glow-x", `${s.glowX.toFixed(1)}%`);
       layer.style.setProperty("--sat-fade", fade.toFixed(3));
+      writeNotes(s);
 
       const hero = Math.round(s.heroFade * 100) / 100;
       if (hero !== lastHero) {
@@ -132,6 +185,8 @@ export default function useSatelliteFlight(canvasRef, layerRef) {
       start();
     };
     const onResize = () => {
+      vw = window.innerWidth;
+      vh = window.innerHeight;
       if (!scene) return;
       scene.resize();
       target = readProgress();
@@ -204,7 +259,7 @@ export default function useSatelliteFlight(canvasRef, layerRef) {
       document.removeEventListener("visibilitychange", onVisibility);
       if (scene) scene.dispose();
     };
-  }, [canvasRef, layerRef]);
+  }, [canvasRef, layerRef, notesRef]);
 
   return { ready, reduced };
 }
