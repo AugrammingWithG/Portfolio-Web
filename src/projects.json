@@ -145,10 +145,12 @@
         "Lead-routing form",
         "AI assistant"
       ],
-      "images": [],
+      "images": [
+        "socialhat-home.png"
+      ],
       "leadImage": null,
       "logo": "logo-socialhat.jpg",
-      "note": "Copy from Augnina 2026-09-15. STILL NEEDED: the Result line (renders as // TODO without it), a live URL, and the hero screenshot she sent in chat (not on disk — save it to Portfolio/ and it becomes images[]). Tagline written here, not hers. Stack chips shortened from her four lines: “WordPress + Divi (existing CMS/theme, retained)”, “All in One SEO”, “SiteGround hosting (Speed Optimizer, Security Optimizer)”, “Custom lead-routing form + AI chat assistant”."
+      "note": "Copy from Augnina 2026-09-15. STILL NEEDED: the Result line (renders as // TODO without it) and a live URL. Tagline written by Claude, not hers. Stack chips shortened from her four lines: “WordPress + Divi (existing CMS/theme, retained)”, “All in One SEO”, “SiteGround hosting (Speed Optimizer, Security Optimizer)”, “Custom lead-routing form + AI chat assistant” — the retained-WordPress nuance moved into whatIBuilt so it is not lost."
     }
   ],
   "onHold": []
