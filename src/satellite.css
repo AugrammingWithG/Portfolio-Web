@@ -322,10 +322,23 @@
    The origin is the TOP edge of the caption box: the box hangs below it and
    the line leaves upward, so the two never overlap.                         */
 @media (max-width: 900px) {
+  /* AT THE TOP OF THE SCREEN, UNDER THE NAV (2026-09-15). The captions were
+     parked at bottom: 13vh, which on a phone is the same band the hero copy
+     stands in - the name, the lede and the links - and, on a real phone, the
+     band the browser's own toolbar covers. Augnina: "the steps 1-5 isn't very
+     visible because it is on the lower where the name and description is
+     also placed." So they sit under the nav now, above the satellite's box,
+     where nothing else is.
+
+     --sat-nav-b is the nav's measured bottom edge, written by the flight
+     hook on resize: the nav wraps to two lines on a narrow phone and three
+     with a larger text setting, so a constant here would land the caption
+     on it for somebody. The 5rem is room for the caption itself, which
+     hangs ABOVE this point - see .sat-note-tx below. */
   .sat-note {
     left: 50%;
-    top: auto;
-    bottom: 13vh;
+    top: calc(var(--sat-nav-b, 5rem) + 5rem);
+    bottom: auto;
     width: 0;
   }
   .sat-note-line { opacity: var(--line-o, 1); }
@@ -334,12 +347,21 @@
   .sat-note--right .sat-note-tx {
     left: 50%;
     right: auto;
-    /* Hangs below the origin, clear of the line leaving it. */
-    transform: translate(-50%, 0.7rem);
+    /* Hangs ABOVE the origin, so the leader line leaves the point below the
+       text and runs down to the part without passing through the words. It
+       hung below when the caption was at the foot of the screen, for the
+       mirror-image reason. */
+    transform: translate(-50%, calc(-100% - 0.6rem));
     margin: 0;
-    max-width: min(82vw, 24rem);
+    max-width: min(86vw, 24rem);
     text-align: center;
     font-size: 0.74rem;
+    /* Nearly solid. Two captions crossfade at the same spot, and at the old
+       0.82 the outgoing one read through the incoming one as a ghost line
+       of words behind the real one. */
+    background:
+      linear-gradient(rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0.015)),
+      rgba(10, 8, 5, 0.96);
   }
   /* The number line: "03 / 05", the count beside the step rather than under
      it, so the label below it stays the widest thing in the box. */

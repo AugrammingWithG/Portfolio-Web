@@ -71,7 +71,20 @@ export default function useSatelliteFlight(canvasRef, layerRef, notesRef) {
        thing this file is otherwise careful to keep out of the frame. */
     const originX = items.map(() => 0);
     const originY = items.map(() => 0);
+    /* WHERE THE NAV ENDS, for the phone layout. Below 900px the captions sit
+       at the top of the screen, under the nav (satellite.css), and the nav's
+       height is not a constant: it wraps to two lines on a narrow phone and
+       to three with a larger text setting. So it is measured here and handed
+       to the stylesheet as --sat-nav-b, in the hero's own coordinates
+       (offsetTop, not a viewport rect) so the number is right even when the
+       resize happens with the page scrolled somewhere else. Written BEFORE
+       the origins are read below, because the caption's position depends on
+       it and the origin is the caption's position. */
+    const nav = document.querySelector(".hero-top");
     const measureOrigins = () => {
+      if (nav) {
+        layer.style.setProperty("--sat-nav-b", Math.round(nav.offsetTop + nav.offsetHeight) + "px");
+      }
       for (let i = 0; i < items.length; i += 1) {
         const r = items[i].getBoundingClientRect();
         originX[i] = r.left;
@@ -277,6 +290,16 @@ export default function useSatelliteFlight(canvasRef, layerRef, notesRef) {
     if (!reduce) window.addEventListener("scroll", onScroll, { passive: true });
     window.addEventListener("resize", onResize);
     document.addEventListener("visibilitychange", onVisibility);
+    /* The nav's height depends on how its mono face wraps, and that face
+       arrives after first paint. Measured once at load, --sat-nav-b was the
+       fallback font's number: 100px where the real one wraps to 119px, and
+       the caption sat 3px into the nav on a 375-wide phone. Measure again
+       once the fonts are in. */
+    if (document.fonts && document.fonts.ready) {
+      document.fonts.ready.then(() => {
+        if (alive) onResize();
+      });
+    }
 
     return () => {
       alive = false;

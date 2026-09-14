@@ -663,11 +663,17 @@
    Named .pw-top, not .pw-head: .pw-head is already the case study panel's
    header further up this file. */
 .pw-top {
-  position: absolute;
+  /* IN FLOW, directly under the HUD header, not at a measured offset from the
+     top. It was absolute with a top of about 3rem, tuned against a one-line
+     header; on a phone with a larger text setting the header wraps to two
+     lines and the bar and the invitation landed underneath it, which is why
+     Augnina could not see the line on her own phone while every emulator
+     showed it. .sector is a flex column, so as the next child this sits under
+     the header at whatever height the header actually takes. The stage behind
+     it is still absolute and unaffected. */
+  position: relative;
   z-index: 6;
-  top: clamp(2.9rem, 7.5vh, 4.2rem);
-  left: 0;
-  right: 0;
+  margin-top: clamp(0.6rem, 1.6vh, 1.1rem);
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -758,10 +764,7 @@
    give up the room.
    ========================================================================== */
 @media (max-width: 900px) {
-  .pw-top {
-    top: clamp(2.6rem, 6.5vh, 3.4rem);
-    gap: 0.4rem;
-  }
+  .pw-top { margin-top: 0.6rem; gap: 0.4rem; }
   .pw-invite { padding: 0 1rem; font-size: 0.72rem; }
 
   /* ONE ROW THAT SCROLLS, not a wrapping block. Wrapping was behind two
@@ -842,12 +845,4 @@
   }
   .pw-nav button { min-height: 2.5rem; }
   .pw-live { min-height: 2.5rem; display: inline-flex; align-items: center; }
-}
-
-/* The HUD header wraps to two lines below about 360px ("SELECTED WORK" and
-   "07 LIVE / 00 INCOMING" no longer fit one), and the name bar's offset was
-   measured against a one-line header: at 344px the two overlapped by 8px.
-   A little more room from the top here, and only here. */
-@media (max-width: 360px) {
-  .pw-top { top: 4.4rem; }
 }
