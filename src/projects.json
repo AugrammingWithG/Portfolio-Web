@@ -122,10 +122,13 @@
         "React",
         "WebAR"
       ],
-      "images": [],
+      "images": [
+        "kwento-kard-home.png",
+        "kwento-kard-studio.png"
+      ],
       "leadImage": null,
       "logo": "logo-kwento-kard.jpg",
-      "note": "Result and live URL still to come from Augniña. Screenshots pending. Role supplied 2026-09-15."
+      "note": "Result and live URL still to come from Augnina. Role supplied 2026-09-15, screenshots 2026-09-15."
     },
     {
       "id": "socialhat",
