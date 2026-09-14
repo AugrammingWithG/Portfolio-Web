@@ -114,7 +114,7 @@
       "tagline": "Filipino-themed, AR-powered business cards. Every card tells a kwento (story).",
       "status": "in-progress",
       "liveUrl": null,
-      "role": null,
+      "role": "Full-Stack Developer",
       "problem": "A printed business card can only hold so much. Kwento Kard lets anyone turn theirs into an augmented-reality experience that lives on top of the card itself.",
       "whatIBuilt": "A React web app: upload a photo of your business card, then plan in 3D by dropping floating text, tappable link buttons, image and media planes, and 3D shapes right on top of it and moving, rotating, and scaling them. Export gives a shareable link and a QR code that encodes the whole design. Anyone who opens the link and points their phone at the printed card sees the AR content anchored to it, using image-tracking AR.",
       "result": null,
@@ -125,7 +125,7 @@
       "images": [],
       "leadImage": null,
       "logo": "logo-kwento-kard.jpg",
-      "note": "Role, result and live URL still to come from Augniña. Screenshots pending."
+      "note": "Result and live URL still to come from Augniña. Screenshots pending. Role supplied 2026-09-15."
     },
     {
       "id": "socialhat",
@@ -133,9 +133,9 @@
       "tagline": "Website redesign for a Perth digital marketing and content agency.",
       "status": null,
       "liveUrl": null,
-      "role": "Full Stack Developer",
-      "problem": "SocialHat's 15-year-old website was outdated and losing them leads — a broken/unsorted portfolio, a mobile experience with pinch-to-zoom disabled, a clunky maths-captcha contact form, and a “New Field” that didn't even work on the Recent Work page. For a marketing agency whose whole pitch is “image is everything,” the site wasn't doing their own image any favors.",
-      "whatIBuilt": "A full UI overhaul across key pages (mobile-friendly, pinch-to-zoom restored), a smart adaptive inquiry form that routes leads by type (client / website / signage host / advertiser), a 24/7 AI assistant trained on SocialHat's services, a filterable portfolio (Video / Web / Signage / Social), and a live Instagram feed embed — plus speed and foundational SEO fixes. Built on the site's existing WordPress + Divi stack, which was retained.",
+      "role": "Full-Stack Developer",
+      "problem": "SocialHat's 15-year-old website was outdated and losing them leads: a broken/unsorted portfolio, a mobile experience with pinch-to-zoom disabled, a clunky maths-captcha contact form, and a “New Field” that didn't even work on the Recent Work page. For a marketing agency whose whole pitch is “image is everything,” the site wasn't doing their own image any favors.",
+      "whatIBuilt": "A full UI overhaul across key pages (mobile-friendly, pinch-to-zoom restored), a smart adaptive inquiry form that routes leads by type (client / website / signage host / advertiser), a 24/7 AI assistant trained on SocialHat's services, a filterable portfolio (Video / Web / Signage / Social), and a live Instagram feed embed, plus speed and foundational SEO fixes. Built on the site's existing WordPress + Divi stack, which was retained.",
       "result": null,
       "stack": [
         "WordPress",
@@ -150,7 +150,7 @@
       ],
       "leadImage": null,
       "logo": "logo-socialhat.jpg",
-      "note": "Copy from Augnina 2026-09-15. STILL NEEDED: the Result line (renders as // TODO without it) and a live URL. Tagline written by Claude, not hers. Stack chips shortened from her four lines: “WordPress + Divi (existing CMS/theme, retained)”, “All in One SEO”, “SiteGround hosting (Speed Optimizer, Security Optimizer)”, “Custom lead-routing form + AI chat assistant” — the retained-WordPress nuance moved into whatIBuilt so it is not lost."
+      "note": "Copy from Augnina 2026-09-15. STILL NEEDED: the Result line (renders as // TODO without it) and a live URL. Tagline written by Claude, not hers. Stack chips shortened from her four lines: “WordPress + Divi (existing CMS/theme, retained)”, “All in One SEO”, “SiteGround hosting (Speed Optimizer, Security Optimizer)”, “Custom lead-routing form + AI chat assistant”; the retained-WordPress nuance moved into whatIBuilt so it is not lost."
     }
   ],
   "onHold": []

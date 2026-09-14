@@ -269,7 +269,7 @@ export default function Skills() {
                           {s.learning && (
                             <>
                               <i className="sk-dot" aria-hidden="true" />
-                              <span className="sr-only"> — still learning</span>
+                              <span className="sr-only">, still learning</span>
                             </>
                           )}
                           {/* THE PROOF, and the only line on the site between
