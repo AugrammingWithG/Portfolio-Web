@@ -27,7 +27,7 @@
       "stack": ["React", "Node.js"],
       "images": ["oxilia-workspace.png", "oxilia-dev-cycle.png"],
       "leadImage": "oxilia-workspace.png",
-      "note": "Blur teammate names and chat text in oxilia-workspace.png before publishing."
+      "note": "Teammate names and chat text in oxilia-workspace.png were already blurred at the source. Verified 2026-09-03; nothing left to redact."
     },
     {
       "id": "mealplanner",

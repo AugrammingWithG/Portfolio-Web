@@ -20,9 +20,51 @@
    as SelectedWorkOrbit.jsx + selected-work-orbit.css. Neither is imported.
    ========================================================================== */
 
+/* ---- the runway ---------------------------------------------------------- *
+   The same shape as .hero-runway, and the other half of the flight. The
+   section pins at the top of the viewport and holds for 45% of one more
+   of scroll; over that stretch the six planets come forward out of the depth
+   the satellite went into, scrubbed by the scroll (readArrival() in
+   usePlanetSystem.js). Then the section releases and the page goes on to
+   Skills. Change this height and the arrival's pace changes with it, and
+   nothing else has to follow.
+
+   --sw-in is that same 0..1, written on the section by the hook. The HUD, the
+   corner frame and the hint ride it in with the planets rather than riding
+   the section's edge up the screen while there is nothing behind them yet. */
+.sw-runway {
+  position: relative;
+  height: 145vh;
+  height: 145dvh;
+}
+/* Where the system is home. Nav, "pull to top", the carry-in and the page's
+   scroll snapping all aim here. One pixel tall and full width rather than a
+   point: a zero-sized snap area is not reliably honoured. */
+.sw-landed {
+  position: absolute;
+  left: 0;
+  top: calc(100% - 100vh);
+  top: calc(100% - 100dvh);
+  width: 100%;
+  height: 1px;
+  pointer-events: none;
+  scroll-snap-align: start;
+}
+
 .sw {
   --pw-line: rgba(255, 255, 255, 0.08);
+  --sw-in: 1;
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  height: 100dvh;
+  min-height: 0; /* .sector's 100vh floor would fight the sticky height */
   overflow: hidden;
+}
+.sw .sector-hud,
+.sw .sector-frame,
+.sw > .sector-hint {
+  opacity: var(--sw-in);
 }
 
 /* The deepest ground on the site — the star field and the grey planets both
@@ -57,13 +99,20 @@
   width: 100%;
   height: 100%;
   display: block;
-  /* Drag has to inspect and orbit, not scroll the page away underneath. */
-  touch-action: none;
+  /* THE SCROLL RULE in usePlanetSystem.js, applied to touch. In the system
+     view the page has to scroll past this section exactly as it would with no
+     canvas here: the stage is the whole viewport on a phone, and `none` made
+     every vertical swipe over it go nowhere. pan-y hands the vertical swipe
+     to the browser and keeps the horizontal one for looking around. Once a
+     project is open the section owns the input anyway (the wheel already
+     does), so the drag can inspect the planet in both axes. */
+  touch-action: pan-y;
   cursor: default;
   opacity: 0;
   transition: opacity 0.9s ease;
 }
 .pw-canvas.is-ready { opacity: 1; }
+.sw.is-open .pw-canvas { touch-action: none; }
 
 /* GOLD — the warp pulse. Cheap on purpose: one gradient, opacity only, no
    filter and no blend mode. */
@@ -313,6 +362,42 @@
   color: var(--ink-3);
 }
 
+/* ---- the screenshots ----------------------------------------------------- *
+   A quiet grid under the spec sheet. Web and desktop shots are wide and stack
+   one per row; phone shots (platform: "mobile" in projects.json) are tall and
+   sit two up, so four of them do not become a scroll of their own.
+
+   The aspect ratios are placeholders. `auto <ratio>` means the file's own
+   ratio wins the moment it has loaded and the fallback only holds the space
+   before that, so the panel does not jump as lazy images land. The phone one
+   is the real ratio of the MealPlanner shots; the wide one is a guess that is
+   never off by much.
+
+   No gold here: the field label above is the accent, and a screenshot is the
+   work itself, not chrome around it. */
+.pw-shots {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0.6rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.pw-shots--mobile { grid-template-columns: 1fr 1fr; }
+.pw-shots li {
+  overflow: hidden;
+  border: 1px solid var(--pw-line);
+  border-radius: 3px;
+  background: rgba(255, 255, 255, 0.03);
+}
+.pw-shots img {
+  display: block;
+  width: 100%;
+  height: auto;
+  aspect-ratio: auto 16 / 9;
+}
+.pw-shots--mobile img { aspect-ratio: auto 646 / 1400; }
+
 .pw-nav {
   display: flex;
   justify-content: space-between;
@@ -346,6 +431,13 @@
    planet still works everywhere the panel is not, and Prev/Next carry the
    navigation that the wheel carries on a desktop.                          */
 @media (max-width: 720px) {
+  /* A shorter arrival on a phone, where the same stretch in viewports is a
+     lot more thumb — the hero's runway is cut the same way. */
+  .sw-runway {
+    height: 140vh;
+    height: 140dvh;
+  }
+
   .pw-panel {
     width: 100%;
     padding-top: clamp(3.5rem, 9vh, 5rem);
@@ -380,6 +472,21 @@
    fades instead of flying in from off-stage.
    ========================================================================== */
 @media (prefers-reduced-motion: reduce) {
+  /* No arrival to scrub, so no runway to scrub it over: the section is an
+     ordinary one-screen section again, and readArrival() reads a runway with
+     no spare height as already landed. */
+  .sw-runway { height: auto; }
+  /* Still a real anchor — the nav points at it — but with no stretch to sit at
+     the end of, it sits at the top. display:none would make #work-landed
+     unreachable and the nav link a no-op. */
+  .sw-landed { top: 0; bottom: auto; }
+  .sw {
+    position: relative;
+    height: auto;
+    min-height: 100vh;
+    min-height: 100dvh;
+  }
+
   .pw-panel {
     transform: none;
     opacity: 0;

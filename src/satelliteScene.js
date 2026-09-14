@@ -159,6 +159,98 @@ export async function createScene(canvas) {
     scene.add(new THREE.Points(g, starMat));
   }
 
+  /* ---- the jump ---------------------------------------------------------- *
+     A second, streaming field for the hand-over, separate from the shell
+     above. A tube of stars around the line of flight that exists only while
+     `warp` is up (warpAt() in useSatelliteFlight.js). Each star is drawn
+     twice: a head (Points) and a tail (LineSegments) that runs away from the
+     camera along z, so on screen every tail points back at the vanishing
+     point and the field reads as streaming past. Tail length and speed both
+     follow warp; at 0 the field is hidden and costs nothing.
+
+     The stars really move. It is the one stateful thing in this file, on
+     purpose: a jump you can pause halfway through and see frozen is not a
+     jump. Everything else here is still a pure function of progress.
+
+     Warm white, not gold — gold is the one accent and it is the bloom's. The
+     fog does the rest: the far end of the tube goes dark on its own, which
+     is what makes it read as depth rather than lines painted on the glass. */
+  const JUMP_N = 480;
+  const JUMP_FAR = -64;
+  const JUMP_NEAR = 9;
+  const jumpPos = new Float32Array(JUMP_N * 3);
+  const jumpSeg = new Float32Array(JUMP_N * 6);
+  {
+    const rand = rng(4421);
+    for (let i = 0; i < JUMP_N; i += 1) {
+      const r = 1.2 + Math.pow(rand(), 0.7) * 13;
+      const a = rand() * 6.28;
+      jumpPos[i * 3] = Math.cos(a) * r;
+      jumpPos[i * 3 + 1] = Math.sin(a) * r * 0.75;
+      jumpPos[i * 3 + 2] = JUMP_FAR + rand() * (JUMP_NEAR - JUMP_FAR);
+    }
+  }
+  const jumpHeadGeo = new THREE.BufferGeometry();
+  jumpHeadGeo.setAttribute("position", new THREE.BufferAttribute(jumpPos, 3));
+  const jumpHeadMat = new THREE.PointsMaterial({
+    color: 0xffffff,
+    size: 0.07,
+    transparent: true,
+    opacity: 0,
+  });
+  const jumpHeads = new THREE.Points(jumpHeadGeo, jumpHeadMat);
+  const jumpTailGeo = new THREE.BufferGeometry();
+  jumpTailGeo.setAttribute("position", new THREE.BufferAttribute(jumpSeg, 3));
+  const jumpTailMat = new THREE.LineBasicMaterial({
+    color: 0xf1e6cc,
+    transparent: true,
+    opacity: 0,
+  });
+  const jumpTails = new THREE.LineSegments(jumpTailGeo, jumpTailMat);
+  jumpHeads.visible = false;
+  jumpTails.visible = false;
+  jumpHeads.frustumCulled = false;
+  jumpTails.frustumCulled = false;
+  scene.add(jumpHeads);
+  scene.add(jumpTails);
+  let jumpClock = 0;
+
+  function stepJump(warp) {
+    const on = warp > 0.002;
+    jumpHeads.visible = on;
+    jumpTails.visible = on;
+    if (!on) {
+      jumpClock = 0;
+      return;
+    }
+    // Frame-rate independent: a throttled tab must not turn into a slideshow
+    // of teleporting stars, so the step is clamped to three frames' worth.
+    const now = performance.now();
+    const dt = jumpClock ? Math.min(3, (now - jumpClock) / 16.7) : 1;
+    jumpClock = now;
+    const speed = warp * 0.55 * dt;
+    const len = warp * 5;
+    const wrap = JUMP_NEAR - JUMP_FAR;
+    for (let i = 0; i < JUMP_N; i += 1) {
+      let z = jumpPos[i * 3 + 2] + speed;
+      if (z > JUMP_NEAR) z -= wrap;
+      jumpPos[i * 3 + 2] = z;
+      const x = jumpPos[i * 3];
+      const y = jumpPos[i * 3 + 1];
+      const o = i * 6;
+      jumpSeg[o] = x;
+      jumpSeg[o + 1] = y;
+      jumpSeg[o + 2] = z;
+      jumpSeg[o + 3] = x;
+      jumpSeg[o + 4] = y;
+      jumpSeg[o + 5] = z - len;
+    }
+    jumpHeadGeo.attributes.position.needsUpdate = true;
+    jumpTailGeo.attributes.position.needsUpdate = true;
+    jumpHeadMat.opacity = warp * 0.9;
+    jumpTailMat.opacity = warp * 0.55;
+  }
+
   /* The satellite hangs off one group, so it can sit in the column the
      keyboard used to occupy and drift back to centre once the flight starts.
      The stars stay put — they are the sky, not cargo. */
@@ -363,13 +455,25 @@ export async function createScene(canvas) {
   const state = {
     glow: 0,
     glowX: 50,
+    glowScale: 1,
     heroFade: 1,
+    skyFade: 1,
     p: 0,
     notes: PROCESS.map(() => ({ x: 50, y: 50, o: 0 })),
   };
 
-  function update(e) {
+  /* `space` is how far the hand-over ground has come up (groundAt() in
+     useSatelliteFlight.js). The star field brightens and swells with it: at
+     0.5 opacity these stars are a sky behind the aurora, but over the flat
+     near-black of the hand-over they all but vanish and the frame reads as
+     empty. Pushed toward the planet scene's own field (size 0.09, opacity
+     0.55) so the two cross-fade as the same stars rather than a faint set
+     cutting to a bright one. */
+  /* `warp` is the jump, 0..1 (warpAt() in useSatelliteFlight.js): it
+     streams the tube of stars, and it flares and swells the bloom. */
+  function update(e, space = 0, warp = 0) {
     const cur = clamp01(e);
+    stepJump(warp);
     const seg1 = clamp01(cur / HALF);
     const seg2 = ease(clamp01((cur - HALF) / (1 - HALF)));
 
@@ -383,7 +487,10 @@ export async function createScene(canvas) {
         d.rr.z + (d.ar.z - d.rr.z) * seg1
       );
     }
-    sat.position.z = -seg2 * 34;
+    /* 22, not the reference's 34. At 34 the pieces were specks by two thirds
+       of the way down the runway and the last third was empty sky; the point
+       of the recession is to still be watchable when the planets take over. */
+    sat.position.z = -seg2 * 22;
     sat.rotation.y += 0.0032 * (1 - seg1 * 0.6);
     sat.rotation.x = -0.12 + seg1 * 0.05;
 
@@ -393,13 +500,17 @@ export async function createScene(canvas) {
     /* The dissolve. Solid while it is still the hero's object, gone by the
        time it would be a speck — so what recedes into the nebula is the
        nebula, not a dark shape laid over it. */
-    const satFade = 1 - ease(clamp01((seg2 - 0.22) / 0.62));
+    /* On the raw progress, not seg2, so it reads as a place on the runway:
+       solid to 0.8, gone at 0.99 — as Selected Work pins
+       and the planets start out of the same dark. */
+    const satFade = 1 - ease(clamp01((cur - 0.8) / 0.19));
     for (const m of satMats) m.opacity = satFade;
     sat.visible = satFade > 0.004;
 
     world.position.set(offsetX * (1 - seg2), offsetY * (1 - seg2 * 0.5), 0);
     world.scale.setScalar(worldScale);
-    starMat.opacity = 0.16 + seg2 * 0.34;
+    starMat.opacity = 0.16 + seg2 * 0.34 + space * 0.35;
+    starMat.size = 0.09 * (1 + space * 0.9);
 
     /* ---- the annotation layer ------------------------------------------- *
        Each step's caption is a fixed point in the margin; the end of its
@@ -451,7 +562,13 @@ export async function createScene(canvas) {
        scroll away on its own — without this the solar cells fly out across the
        headline and sit on it for the rest of the block. Clear by cur ~0.42. */
     state.heroFade = clamp01(1 - cur * 2.4);
-    state.glow = clamp01(0.14 + seg1 * 0.7 * (1 - seg2 * 0.86));
+    /* The hero's sky — aurora, milky way, gold current — goes out under the
+       receding satellite, so by the time Selected Work slides in beneath this
+       layer both sides of its edge are the same near-black and the stars
+       here are the only sky. hero.css reads it as --sky-fade. */
+    state.skyFade = 1 - ease(clamp01((cur - 0.62) / 0.22));
+    state.glow = clamp01(Math.max(0.14 + seg1 * 0.7 * (1 - seg2 * 0.86), warp * 0.8));
+    state.glowScale = 1 + warp * 0.6;
     state.glowX = 50 + ((offsetX * (1 - seg2)) / (camera.position.z * TAN * camera.aspect)) * 50;
     /* The layer's own fade is NOT computed here. It is the hand-over to
        Selected Work, so it has to track the real scroll rather than the eased

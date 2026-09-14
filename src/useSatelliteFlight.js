@@ -30,6 +30,7 @@ import { PROCESS } from "./process.js";
    ========================================================================== */
 
 const clamp01 = (v) => (v < 0 ? 0 : v > 1 ? 1 : v);
+const ease = (t) => t * t * (3 - 2 * t); // the scene's smoothstep
 
 /* 0 at the top of the hero, 1 where Selected Work meets the top of the
    viewport. Two rect reads per scroll event. */
@@ -44,6 +45,22 @@ function readProgress() {
   const span = end - start;
   if (span <= 0) return 0;
   return clamp01((y - start) / span);
+}
+
+/* The stretch after that: 0 as Selected Work pins, 1 when its runway is used
+   up. The same reading usePlanetSystem.js makes of the same element, so the
+   layer's exit and the planets' arrival cannot drift apart. #work is the
+   runway; its sticky section is the first element child. A runway with no
+   spare height (reduced motion) reads as landed. */
+function readArrival() {
+  const work = document.getElementById("work");
+  if (!work) return 1;
+  const section = work.querySelector(".sw");
+  const span = work.offsetHeight - (section ? section.offsetHeight : 0);
+  if (span <= 0) return 1;
+  const y = window.scrollY || window.pageYOffset || 0;
+  const top = y + work.getBoundingClientRect().top;
+  return clamp01((y - top) / span);
 }
 
 export default function useSatelliteFlight(canvasRef, layerRef, notesRef) {
@@ -78,6 +95,7 @@ export default function useSatelliteFlight(canvasRef, layerRef, notesRef) {
     let raf = null;
     let alive = true;
     let target = 0;
+    let arrival = 0;
     let current = 0;
     let park = null;
 
@@ -90,14 +108,40 @@ export default function useSatelliteFlight(canvasRef, layerRef, notesRef) {
        focusable links behind a satellite. */
     const root = document.documentElement;
     let lastHero = -1;
+    let lastSky = -1;
 
-    /* The hand-over to Selected Work. Taken from the raw scroll rather than
-       the eased `current` every other value here runs on: the point of it is
-       that this layer is gone by the time the planet system is on screen, and
-       an eased fade misses that deadline whenever the scroll arrives in one
-       jump — an anchor link to #work, a restored position, a fast flick. The
-       satellite then paints over a section that is itself a 3D scene. */
-    const fadeAt = (p) => 1 - clamp01((p - 0.965) / 0.035);
+    /* THE HAND-OVER TO SELECTED WORK, in two values.
+
+       The layer does not stop at the section's edge any more. Selected Work
+       pins at the top of the viewport and holds for a stretch (see .sw-runway
+       in selected-work.css), and over that stretch the planets come forward
+       out of the depth the satellite went into. `arrival` is that stretch as
+       0..1, read from the same runway the planet hook reads it from, and the
+       layer leaves across it rather than at the edge, so the stars here hand
+       over to the planet scene's own stars instead of cutting to them.
+
+       `ground` is the space the satellite dissolves into. A near-black fill
+       on the layer, under the canvas: it comes up as the pieces go (eased
+       `current`, so it tracks the dissolve exactly) and clears again as the
+       system arrives (raw `arrival`, see below). While it is up it covers the
+       page, which is what hides the section sliding in underneath — with it,
+       what you see is the satellite gone into deep space and the planets
+       coming out of it, not one section scrolling over another.
+
+       Both take the raw scroll for their way OUT: the point of them is that
+       the layer is off the planets by the time anyone can drag one, and an
+       eased fade misses that whenever the scroll arrives in one jump — an
+       anchor link to #work-landed, a restored position, a fast flick. */
+    const fadeAt = (arrival) => 1 - clamp01((arrival - 0.35) / 0.45);
+    /* The jump. Up as the last pieces go (eased, with the dissolve), held
+       through the pin, and down again over the first half of the arrival
+       (raw, so it is over before anything can be dragged). The planets
+       decelerate into place as the streaks shorten — that is the whole
+       transition: not a black beat, a jump you arrive out of. */
+    const warpAt = (cur, arrival) =>
+      ease(clamp01((cur - 0.84) / 0.13)) * (1 - ease(clamp01((arrival - 0.08) / 0.4)));
+    const groundAt = (cur, arrival) =>
+      ease(clamp01((cur - 0.88) / 0.11)) * (1 - ease(clamp01(arrival / 0.25)));
 
     /* The captions. Each is pinned at a fixed origin in the margin (--sx/--sy,
        set once as inline styles in SatelliteHero) and its leader line runs to
@@ -136,10 +180,12 @@ export default function useSatelliteFlight(canvasRef, layerRef, notesRef) {
       }
     };
 
-    const write = (s, fade) => {
+    const write = (s, fade, ground) => {
       layer.style.setProperty("--sat-glow", s.glow.toFixed(3));
       layer.style.setProperty("--sat-glow-x", `${s.glowX.toFixed(1)}%`);
+      layer.style.setProperty("--sat-glow-scale", s.glowScale.toFixed(3));
       layer.style.setProperty("--sat-fade", fade.toFixed(3));
+      layer.style.setProperty("--sat-ground", ground.toFixed(3));
       writeNotes(s);
 
       const hero = Math.round(s.heroFade * 100) / 100;
@@ -148,6 +194,12 @@ export default function useSatelliteFlight(canvasRef, layerRef, notesRef) {
         root.style.setProperty("--hero-fade", String(hero));
         root.classList.toggle("is-flying", hero < 0.02);
       }
+      // Same treatment as --hero-fade: on :root, quantised, written on change.
+      const sky = Math.round(s.skyFade * 100) / 100;
+      if (sky !== lastSky) {
+        lastSky = sky;
+        root.style.setProperty("--sky-fade", String(sky));
+      }
     };
 
     function loop() {
@@ -155,10 +207,11 @@ export default function useSatelliteFlight(canvasRef, layerRef, notesRef) {
       // Chase the scroll rather than snapping to it, exactly as the reference
       // does: the wheel arrives in jumps and a raw binding stutters.
       current += (target - current) * 0.1;
-      const s = scene.update(current);
+      const ground = groundAt(current, arrival);
+      const fade = fadeAt(arrival);
+      const s = scene.update(current, ground, warpAt(current, arrival));
       scene.render();
-      const fade = fadeAt(target);
-      write(s, fade);
+      write(s, fade, ground);
 
       // Nothing left to draw once the layer has handed over to Selected Work
       // and the chase has caught up. onScroll starts it again.
@@ -182,6 +235,7 @@ export default function useSatelliteFlight(canvasRef, layerRef, notesRef) {
 
     const onScroll = () => {
       target = readProgress();
+      arrival = readArrival();
       start();
     };
     const onResize = () => {
@@ -190,8 +244,9 @@ export default function useSatelliteFlight(canvasRef, layerRef, notesRef) {
       if (!scene) return;
       scene.resize();
       target = readProgress();
+      arrival = readArrival();
       if (reduce) {
-        write(scene.update(0), fadeAt(0));
+        write(scene.update(0), 1, 0);
         scene.render();
       } else {
         start();
@@ -214,15 +269,19 @@ export default function useSatelliteFlight(canvasRef, layerRef, notesRef) {
           /* Reduced motion: the satellite whole, one frame, no fly-in and no
              planets. The sections below reveal themselves the way they always
              do — nothing here is holding them back. */
-          write(scene.update(0), fadeAt(0));
+          write(scene.update(0), 1, 0);
           scene.render();
           setReady(true);
           /* A fixed canvas that never moves would sit over Selected Work and
              Skills for the rest of the page, so it is dismissed once the hero
              is behind you. One class, one transition. */
+          /* rootMargin -1px: an element whose bottom edge exactly touches the
+             top of the viewport still counts as intersecting, and that is
+             exactly where an anchor link to #work-landed puts the hero. Without
+             the margin the whole satellite would sit over the planets there. */
           park = new IntersectionObserver(
             ([e]) => layer.classList.toggle("is-parked", !e.isIntersecting),
-            { threshold: 0 }
+            { threshold: 0, rootMargin: "-1px 0px 0px 0px" }
           );
           const hero = document.getElementById("top");
           if (hero) park.observe(hero);
@@ -230,8 +289,10 @@ export default function useSatelliteFlight(canvasRef, layerRef, notesRef) {
         }
 
         target = readProgress();
+        arrival = readArrival();
         current = target;
-        write(scene.update(current), fadeAt(target));
+        const ground = groundAt(current, arrival);
+        write(scene.update(current, ground, warpAt(current, arrival)), fadeAt(arrival), ground);
         scene.render();
         setReady(true);
         start();
@@ -252,6 +313,7 @@ export default function useSatelliteFlight(canvasRef, layerRef, notesRef) {
       // Leave the document as we found it — the hero owns its own opacity
       // again the moment the flight is not driving it.
       root.style.removeProperty("--hero-fade");
+      root.style.removeProperty("--sky-fade");
       root.classList.remove("is-flying");
       if (park) park.disconnect();
       window.removeEventListener("scroll", onScroll);

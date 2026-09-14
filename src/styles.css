@@ -1,5 +1,5 @@
 /* ---------------------------------------------------------------
-   Tokens - palette matches the locked look used by Projects.jsx.
+   Tokens - the locked look: dark ground, brass gold, frosted glass.
    Gold is the only accent. Blue and teal live in the ambient light.
    --------------------------------------------------------------- */
 :root {
@@ -39,6 +39,15 @@
 
 html {
   scroll-behavior: smooth;
+  /* SNAPPING, and where it is allowed to act. proximity, never mandatory:
+     the hero and Selected Work are scroll-scrubbed runways, and a mandatory
+     snap would throw the reader past the satellite coming apart. With
+     proximity the page only settles onto a snap point once a scroll ends
+     within a third of a viewport of one, and there are exactly two points:
+     the landed planet system (#work-landed) and Skills. Nothing in the hero
+     is a snap point, so the flight scrubs freely; the carry-in that takes
+     over once the satellite is gone is JavaScript, in usePlanetSystem.js. */
+  scroll-snap-type: y proximity;
 }
 
 body {

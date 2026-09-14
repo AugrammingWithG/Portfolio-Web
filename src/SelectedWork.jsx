@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { PLANETS, LIVE_COUNT, SOON_COUNT } from "./planets.js";
 import usePlanetSystem from "./usePlanetSystem.js";
 
@@ -32,6 +32,20 @@ function Field({ value }) {
   return <>{value}</>;
 }
 
+/* One screenshot. Lazy, because the panel is off-stage until a project is
+   opened and nothing should load for a case study nobody has asked for. A
+   file that fails to load drops out of the grid rather than leaving a broken
+   image in a portfolio. */
+function Shot({ src, alt }) {
+  const [failed, setFailed] = useState(false);
+  if (failed) return null;
+  return (
+    <li>
+      <img src={src} alt={alt} loading="lazy" decoding="async" onError={() => setFailed(true)} />
+    </li>
+  );
+}
+
 /* What an incoming project says instead of a write-up. One place, so adding a
    project to `onHold` in projects.json needs no copy anywhere in the code. */
 const SOON_COPY = {
@@ -41,6 +55,7 @@ const SOON_COPY = {
 
 export default function SelectedWork() {
   const sectionRef = useRef(null);
+  const runwayRef = useRef(null);
   const canvasRef = useRef(null);
   const flashRef = useRef(null);
   const panelRef = useRef(null);
@@ -51,6 +66,7 @@ export default function SelectedWork() {
   const { ready, failed, view, reduced, open, navTo, close } = usePlanetSystem({
     canvasRef,
     sectionRef,
+    runwayRef,
     flashRef,
     panelRef,
     labelRefs,
@@ -84,12 +100,21 @@ export default function SelectedWork() {
   };
 
   return (
+    /* A runway with the section stuck inside it, the same shape as the hero
+       and for the same reason: the arrival is scrubbed by scroll, so the
+       system needs a stretch of page to come forward over while the frame
+       holds still. #work is the runway's top — that is where the satellite's
+       flight ends and this one begins. #work-landed sits at the end of the
+       stretch, where the planets are home; the nav and the panel's "pull to
+       top" both go there, so nobody lands in front of six planets that have
+       not arrived yet. See readArrival() in usePlanetSystem.js. */
+    <div className="sw-runway" id="work" ref={runwayRef}>
+    <i className="sw-landed" id="work-landed" aria-hidden="true" />
     <section
       className={`sector sw ${isOpen ? "is-open" : ""} ${ready ? "is-ready" : ""} ${
         failed ? "is-fallback" : ""
       }`}
       ref={sectionRef}
-      id="work"
     >
       <div className="sector-scrim" aria-hidden="true" />
       <div className="sector-frame" aria-hidden="true">
@@ -213,6 +238,24 @@ export default function SelectedWork() {
           )}
         </div>
 
+        {/* The screenshots, last: the spec sheet reads first and the evidence
+            follows it. The row only exists when there is something to show —
+            AiCore's "Visuals to follow" line above is what covers the gap. */}
+        {project && !project.soon && project.shots.length > 0 && (
+          <div className="pw-row">
+            <p className="k">Screens</p>
+            <ul className={`pw-shots pw-shots--${project.platform}`}>
+              {project.shots.map((src, i) => (
+                <Shot
+                  key={src}
+                  src={src}
+                  alt={`${project.name} screenshot ${i + 1} of ${project.shots.length}`}
+                />
+              ))}
+            </ul>
+          </div>
+        )}
+
         <div className="pw-nav">
           <button type="button" onClick={() => navTo(-1)}>
             ← Prev work
@@ -231,5 +274,6 @@ export default function SelectedWork() {
           : "Drag to look around · select a planet to open it"}
       </p>
     </section>
+    </div>
   );
 }

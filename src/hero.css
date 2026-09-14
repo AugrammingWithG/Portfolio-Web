@@ -62,10 +62,15 @@
 
    The flight measures itself from this block's top to Selected Work's top —
    see readProgress() in useSatelliteFlight.js — so changing this height
-   changes the pace of the whole flight, and nothing else has to follow.    */
+   changes the pace of the whole flight, and nothing else has to follow.
+
+   180, down from 500: five viewports of teardown before any work showed was
+   too long a road (Augniña's words: "too much scrolling before we go to the
+   works", three times). At 180 each caption gets ~a third of a viewport
+   of scroll, which is enough to read it at a normal pace.                  */
 .hero-runway {
   position: relative;
-  height: 500vh;
+  height: 180vh;
 }
 
 .hero {
@@ -90,6 +95,21 @@
   background: var(--h-bg);
   -webkit-mask-image: linear-gradient(180deg, #000 0%, #000 74%, transparent 100%);
   mask-image: linear-gradient(180deg, #000 0%, #000 74%, transparent 100%);
+}
+
+/* ---- the sky goes out under the flight ----------------------------------- *
+   --sky-fade is written by the flight the same way --hero-fade is (see
+   useSatelliteFlight.js): 1 while the satellite is the hero's object, 0 by
+   the time it has receded, so the aurora, the haze and the current are gone
+   before Selected Work slides in underneath the satellite layer. Both sides
+   of that edge are then the same near-black with the same stars over them,
+   and the section arriving is not a visible event — the planets are. Under
+   reduced motion nothing writes it, so the sky stays. The rails (::after)
+   are not in here: the top bar still needs them. */
+.aurora,
+.milkyway,
+.hero-flow {
+  opacity: var(--sky-fade, 1);
 }
 
 /* living aurora */
@@ -409,7 +429,7 @@
 @media (max-width: 900px) {
   /* Shorter runway on a phone, where a scroll of the same length in viewports
      is a much longer thumb journey. Same ratio the teardown block used. */
-  .hero-runway { height: 400vh; }
+  .hero-runway { height: 160vh; }
   .hero-grid {
     padding-top: 132px;
     padding-bottom: 80px;

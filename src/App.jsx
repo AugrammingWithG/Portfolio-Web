@@ -5,8 +5,6 @@ import usePointerFx from "./usePointerFx.js";
 import SkillsKeyboard from "./SkillsKeyboard.jsx";
 import SelectedWork from "./SelectedWork.jsx";
 import Footer from "./Footer.jsx";
-// The old glassmorphism projects grid is still in the repo as Projects.jsx.
-// Swap it back in here if you want to compare the two directions.
 
 export default function App() {
   const cursorRef = useRef(null);

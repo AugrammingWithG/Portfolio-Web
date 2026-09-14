@@ -8,7 +8,9 @@ import useFlowField from "./useFlowField.js";
    Skills follows. Labels and styling are untouched — only the order moved,
    and it moved to keep matching the page. */
 const NAV = [
-  { href: "#work", label: "Selected work" },
+  /* #work-landed, not #work: #work is the top of the runway where the planets
+     are still out in the depth. The anchor at its end is where they are home. */
+  { href: "#work-landed", label: "Selected work" },
   { href: "#skills", label: "Skills" },
   { href: "#contact", label: "Contact" },
 ];

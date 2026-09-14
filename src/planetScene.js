@@ -489,8 +489,13 @@ export async function createScene(canvas, planets, opts = {}) {
   }
 
   /* ---- the arrival ------------------------------------------------------- *
-     Runs once, when enough of the section is on screen to watch it happen —
-     the ratio gate in usePlanetSystem.js is the other half of this.
+     Scrubbed by scroll, not played on a timer. Selected Work is pinned for a
+     stretch after it reaches the top of the viewport (see .sw-runway in
+     selected-work.css), and usePlanetSystem.js turns that stretch into a
+     0..1 that lands here every scroll event. The satellite's flight works
+     the same way, and it is the same journey: the satellite recedes into the
+     depth under your hand, and the system comes forward out of it under the
+     same hand. Reversible, like the flight — scroll back up and they recede.
 
      Every planet starts ARRIVE_BACK behind its own home and eases forward on
      to it, fading up as it comes. Straight along z: the x and y it lands on
@@ -501,49 +506,51 @@ export async function createScene(canvas, planets, opts = {}) {
      so it is the same on every load rather than reshuffling. It is what keeps
      six objects from moving like one sheet — but every one of them is doing
      the SAME thing, a beat apart. Not one of them is singled out. Singling one
-     out was the bug.                                                        */
-  function arrive() {
-    if (arrived) return;
-    arrived = true;
-    if (reduce) return;
+     out was the bug.
 
-    arriving = true;
-    const legs = groups.map((g) => {
-      const home = g.userData.home.clone();
-      const from = home.clone();
-      from.z -= ARRIVE_BACK;
-      g.position.copy(from);
-      setOpacity(g, 0);
-      return { g, from, home, lead: g.userData.proj.seed * 0.3 };
+     The labels follow their own planet in (frame() reads userData.landed), and
+     nothing can be picked until the system has fully landed: a click on a
+     planet that is still half a unit out would open a case study over a
+     half-finished arrival.
+
+     Under reduced motion there is no pinned stretch and no scrub: the first
+     call parks everything at home and that is the end of it.               */
+  let arrival = 0;
+
+  function setArrival(t) {
+    const v = reduce ? 1 : Math.max(0, Math.min(1, t));
+    /* Open a project and select() owns these planets — it is fading five of
+       them out and flying the sixth to the stage. Writing position and opacity
+       underneath it and the two fight. The scrub simply stands down; clicks
+       are gated on arrival = 1, so it only ever stands down at home. */
+    if (state !== "system") {
+      arrival = v;
+      return;
+    }
+    arrival = v;
+    arriving = v < 1;
+    arrived = v >= 1;
+
+    /* Quadratic, not the cubic easeOut the timed version used: cubic put
+       nine tenths of the travel in the first third of the stretch and left
+       the rest a slow settle over empty scroll. Quadratic keeps the planets
+       visibly moving until about two thirds through. */
+    const p = 1 - (1 - v) * (1 - v);
+    groups.forEach((g) => {
+      const home = g.userData.home;
+      const lead = g.userData.proj.seed * 0.3;
+      const k = Math.max(0, Math.min(1, (p - lead) / (1 - lead)));
+      g.position.set(home.x, home.y, home.z - ARRIVE_BACK * (1 - k));
+      setOpacity(g, k);
+      g.userData.landed = k;
     });
+  }
 
-    tween(
-      1200,
-      easeOut,
-      (p) => {
-        /* Open a project inside the first 1.2s and select() owns these
-           planets now — it is fading five of them out and flying the sixth to
-           the stage. Keep writing position and opacity underneath it and the
-           two tweens fight. The arrival simply stands down. */
-        if (state !== "system") return;
-        legs.forEach(({ g, from, home, lead }) => {
-          const t = Math.max(0, Math.min(1, (p - lead) / (1 - lead)));
-          g.position.lerpVectors(from, home, t);
-          setOpacity(g, t);
-        });
-      },
-      () => {
-        arriving = false;
-        if (state !== "system") return; // stood down; whatever took over owns them
-        /* Land exactly, then let fitWidth have the last word on x — a resize
-           during the flight moves home out from under the tween. */
-        legs.forEach(({ g, home }) => {
-          g.position.copy(home);
-          setOpacity(g, 1);
-        });
-        fitWidth();
-      }
-    );
+  /* Kept for callers that still want the old one-shot: a jump straight to
+     the landed position (an anchor link, a restored scroll) arrives at
+     arrival = 1 through the scrub anyway, so this is just that. */
+  function arrive() {
+    setArrival(1);
   }
 
   /* ---- picking and dragging ---------------------------------------------- */
@@ -555,6 +562,7 @@ export async function createScene(canvas, planets, opts = {}) {
   /* x and y are relative to the canvas, not the window — the prototype owned
      the whole viewport and this does not. */
   function pick(x, y) {
+    if (arrival < 0.98) return -1; // nothing to open until the system has landed
     mouse.x = (x / w) * 2 - 1;
     mouse.y = -(y / h) * 2 + 1;
     ray.setFromCamera(mouse, camera);
@@ -681,9 +689,16 @@ export async function createScene(canvas, planets, opts = {}) {
         /* inline-flex, not the prototype's `block`: the number and the name
            are laid out with a flex gap, and `block` silently drops it — which
            is how "02Oxilia" ends up run together. */
-        const on = pv.z < 1;
+        /* A label rides its planet in: it is as present as the planet is
+           (userData.landed, written by setArrival) and cannot be pressed
+           until the planet is home. Otherwise six labels would sit over
+           empty space naming worlds that have not arrived. */
+        const landed = g.userData.landed === undefined ? 1 : g.userData.landed;
+        const on = pv.z < 1 && landed > 0.02;
         el.style.display = on ? "inline-flex" : "none";
         if (on) {
+          el.style.opacity = landed.toFixed(2);
+          el.style.pointerEvents = landed > 0.98 ? "" : "none";
           el.style.transform = `translate(-50%,-50%) translate(${((pv.x * 0.5 + 0.5) * w).toFixed(
             1
           )}px, ${((-pv.y * 0.5 + 0.5) * h).toFixed(1)}px)`;
@@ -710,6 +725,10 @@ export async function createScene(canvas, planets, opts = {}) {
   }
 
   resize();
+  /* The system starts where the scrub would put it at 0: back in the depth
+     and unlit. The first scroll reading lands the real value; under reduced
+     motion this same call parks everything at home. */
+  setArrival(0);
   frame();
 
   return {
@@ -720,6 +739,7 @@ export async function createScene(canvas, planets, opts = {}) {
     navTo,
     deselect,
     arrive,
+    setArrival,
     pick,
     setHover,
     orbit,

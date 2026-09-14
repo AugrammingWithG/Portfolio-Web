@@ -44,9 +44,27 @@
   opacity: var(--sat-fade, 1);
 }
 
+/* ---- the ground ---------------------------------------------------------- *
+   The one thing on this layer that is not transparent, and only for the
+   hand-over. It is the space the satellite dissolves into: the hero's own
+   near-black, coming up under the stars as the last pieces go and clearing
+   again as the planets come forward (--sat-ground, written by the flight —
+   see groundAt() in useSatelliteFlight.js). While it is up it covers the
+   section sliding in underneath, which is the point: the viewer sees deep
+   space, then planets emerging from it, never one section scrolling over
+   another. Opacity only, on a flat fill: nothing here blurs or blends.      */
+.sat-layer::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: var(--h-bg);
+  opacity: var(--sat-ground, 0);
+}
+
 .sat {
   position: absolute;
   inset: 0;
+  overflow: hidden; /* the bloom scales up during the jump; clip it here */
   pointer-events: none;
 }
 
@@ -75,6 +93,10 @@
   inset: 0;
   pointer-events: none;
   opacity: var(--sat-glow, 0);
+  /* The flare. During the jump the bloom swells around its own centre —
+     transform only, so it stays a compositor move like the opacity. */
+  transform: scale(var(--sat-glow-scale, 1));
+  transform-origin: var(--sat-glow-x, 50%) 46%;
   background:
     radial-gradient(
       40vmax 32vmax at var(--sat-glow-x, 50%) 46%,

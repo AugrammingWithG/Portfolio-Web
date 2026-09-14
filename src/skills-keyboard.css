@@ -20,6 +20,12 @@
    lifts a little through its middle because it is the step back up out of the
    deepest ground on the site. See the handoff rule in hud.css before touching
    these; the hud.css defaults were written for its old position. */
+/* The page settles onto the keyboard once a scroll ends near it — see the
+   snapping note on html in styles.css. Contact is not a snap point: it is
+   shorter than a viewport, so aligning its top would be asking for scroll
+   that does not exist. */
+.kb { scroll-snap-align: start; }
+
 .kb .sector-scrim {
   --scrim-top: 0.58;
   --scrim-mid: 0.5;

@@ -174,6 +174,12 @@ export const PLANETS = [...LIVE, ...SOON].map(({ p, soon }, i) => {
     result: p.result || null,
     live: p.liveUrl || null, // <-- REAL URLS GO IN projects.json, not here
     shown: shownVia(p),
+    /* The screenshots, as paths under public/. `images` in projects.json is
+       bare filenames; the panel is what says "Shown via ... screenshots", so
+       it is also what has to show them. `platform` decides how they lay out:
+       phone shots are tall and sit two up, everything else stacks. */
+    shots: (p.images || []).map((f) => `images/${f}`),
+    platform: p.platform || "web",
     soon,
     logo: null, // <-- PASTE LOGO PATH HERE (e.g. "images/logo-aicore.svg")
     seed: SEEDS[i % SEEDS.length],

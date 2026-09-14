@@ -44,13 +44,29 @@ const navFallback = (v, d) => {
 };
 const closeFallback = (v) => ({ ...v, state: "system", index: -1 });
 
-/* How much of the section has to be on screen before the arrival is worth
-   playing. At 0 it fired the moment one pixel crossed the viewport edge, so
-   it ran while the section was still a sliver at the bottom of the screen. */
-const ARRIVE_AT = 0.4;
+const clamp01 = (v) => (v < 0 ? 0 : v > 1 ? 1 : v);
+
+/* THE ARRIVAL, as a scroll position. The section sits sticky inside a taller
+   runway (.sw-runway), the same shape as the hero: it reaches the top of the
+   viewport and then holds there while the rest of the runway scrolls under
+   it. That held stretch is the arrival — 0 the moment the section pins, 1
+   when the runway is used up and the section is about to release. The
+   satellite's flight is read the same way from its own runway, and the two
+   meet: its 1 is this 0.
+
+   A runway with no spare height (reduced motion collapses it) has no stretch
+   to scrub, and reads as already landed. */
+function readArrival(runway, section) {
+  if (!runway || !section) return 1;
+  const span = runway.offsetHeight - section.offsetHeight;
+  if (span <= 0) return 1;
+  const y = window.scrollY || window.pageYOffset || 0;
+  const top = y + runway.getBoundingClientRect().top;
+  return clamp01((y - top) / span);
+}
 
 export default function usePlanetSystem(refs) {
-  const { canvasRef, sectionRef, flashRef, panelRef, labelRefs } = refs;
+  const { canvasRef, sectionRef, runwayRef, flashRef, panelRef, labelRefs } = refs;
 
   const [ready, setReady] = useState(false);
   /* The scene could not be built — no WebGL, or the chunk failed. The section
@@ -88,8 +104,6 @@ export default function usePlanetSystem(refs) {
     let raf = null;
     let alive = true;
     let onScreen = false;
-    // Whether the section has ever been on screen enough to earn the arrival.
-    let seen = false;
     let wheelLock = null;
 
     let dragging = false;
@@ -101,12 +115,91 @@ export default function usePlanetSystem(refs) {
       if (alive) setView((v) => ({ ...v, ...patch }));
     };
 
-    /* The arrival needs the scene built AND the section actually looked at,
-       and those finish in either order — the scene arrives by dynamic import,
-       the section by scrolling. Both sides call this; scene.arrive() only
-       ever runs once, so whichever is second is the one that starts it. */
-    const tryArrive = () => {
-      if (scene && seen) scene.arrive();
+    /* The scrub. Every scroll event reads where the section is in its runway
+       and hands it to the scene, which places the six planets accordingly;
+       the same number goes on the section as --sw-in so the HUD, the corner
+       frame and the hint fade in with the system instead of riding the
+       section's edge up the screen while it is still empty. Quantised and
+       written only on change, for the same reason --hero-fade is. */
+    const runway = runwayRef ? runwayRef.current : null;
+    let lastIn = -1;
+    const applyArrival = () => {
+      const a = readArrival(runway, section);
+      if (scene) scene.setArrival(a);
+      const q = Math.round(a * 100) / 100;
+      if (q !== lastIn) {
+        lastIn = q;
+        section.style.setProperty("--sw-in", String(q));
+      }
+    };
+    /* THE CARRY-IN. Once the satellite has dissolved the reader is looking
+       at dark space with the planets still out in it, and a scroll that stops
+       there should not leave them to push the last stretch by hand: the page
+       eases to the landed position itself. The arrival is scrubbed by scroll
+       and a smooth scroll is scroll, so the carry IS the arrival playing.
+
+       Guards, all of them load-bearing:
+         * downward only — a reader backing up out of the system is leaving,
+           not arriving, and must not be turned around
+         * only once the captions are done — from 0.76 of the hero's runway
+           (the last caption closes at 0.76, see process.js) to just short of
+           landed. Everything after that point is the dissolve, the jump and
+           the arrival, none of which needs the reader's hand on it
+         * only in the system view: while a case study is open the wheel is
+           the panel's and the page does not scroll at all
+         * never under reduced motion
+
+       scrollend where the browser has it — by definition nothing is in flight
+       when it fires, so every scrollend is a fresh decision, and a carry the
+       reader interrupted with a second wheel tick simply gets decided again
+       at their next stop. Where there is no scrollend, a short debounce on
+       scroll stands in, with a latch so a carry in progress is not restarted
+       every 160ms by its own scroll events. The page's CSS proximity snap
+       (see html in styles.css) aims at the same point, so the two never
+       disagree about where to settle.                                       */
+    let lastScrollY = window.scrollY || 0;
+    let goingDown = true;
+    let carrying = false;
+    let carryTimer = null;
+    const carryIn = () => {
+      if (reduce || !runway || !goingDown) return false;
+      if (stateRef.current !== "system") return false;
+      const span = runway.offsetHeight - section.offsetHeight;
+      if (span <= 0) return false;
+      const top = runway.getBoundingClientRect().top;
+      /* Where we are in the hero's flight, read the way the flight reads it:
+         the runway's top is the flight's end, its height the flight's span. */
+      const hero = document.getElementById("top");
+      const heroSpan = hero ? hero.offsetHeight : 0;
+      const p = heroSpan > 0 ? 1 - top / heroSpan : 1;
+      if (p < 0.76) return false;
+      const y = window.scrollY || 0;
+      const landed = top + y + span;
+      if (y >= landed - 2) return false;
+      window.scrollTo({ top: landed, behavior: "smooth" });
+      return true;
+    };
+    const onScrollEnd = () => {
+      carryIn();
+    };
+    const carryDebounced = () => {
+      if (carrying) return;
+      if (carryIn()) {
+        carrying = true;
+        window.setTimeout(() => {
+          carrying = false;
+        }, 900);
+      }
+    };
+    const onScroll = () => {
+      const y = window.scrollY || 0;
+      if (y !== lastScrollY) goingDown = y > lastScrollY;
+      lastScrollY = y;
+      applyArrival();
+      if (!("onscrollend" in window)) {
+        if (carryTimer) window.clearTimeout(carryTimer);
+        carryTimer = window.setTimeout(carryDebounced, 160);
+      }
     };
 
     function loop() {
@@ -154,6 +247,14 @@ export default function usePlanetSystem(refs) {
       }
       dragging = false;
       if (scene.getState() === "detail") canvas.style.cursor = "grab";
+    };
+
+    /* A touch the browser takes for scrolling (touch-action: pan-y on the
+       canvas) ends in pointercancel, not pointerup. Without this the drag
+       stays armed and the next stray move spins the system. */
+    const onCancel = () => {
+      dragging = false;
+      if (scene && scene.getState() === "detail") canvas.style.cursor = "grab";
     };
 
     const onMove = (e) => {
@@ -231,12 +332,19 @@ export default function usePlanetSystem(refs) {
       }
     };
 
-    /* Opening pulls the section to the top of the viewport first. Once a
-       project is open the wheel belongs to this section, so a half-scrolled
-       section would be a half-visible case study with no way to fix it. */
+    /* Opening pulls the page to the LANDED position first — the end of the
+       runway, where the section is still pinned and the system is fully
+       home. Once a project is open the wheel belongs to this section, so a
+       half-scrolled section would be a half-visible case study with no way
+       to fix it, and a half-arrived one would open over planets still on
+       their way in. */
     function openAt(i) {
       if (!scene) return;
-      const top = section.getBoundingClientRect().top + window.scrollY;
+      const base = runway || section;
+      const top =
+        base.getBoundingClientRect().top +
+        window.scrollY +
+        (runway ? Math.max(0, runway.offsetHeight - section.offsetHeight) : 0);
       if (Math.abs(window.scrollY - top) > 8) {
         window.scrollTo({ top, behavior: reduce ? "auto" : "smooth" });
       }
@@ -265,8 +373,8 @@ export default function usePlanetSystem(refs) {
         api.current = { ...scene, openAt };
         setReady(true);
         start();
-        // The section may already have been in view before this import landed.
-        tryArrive();
+        // The page may already be anywhere in the runway when this import lands.
+        applyArrival();
       } catch (err) {
         // No WebGL, or the chunk failed. The section still lists every
         // project as text — see the labels in SelectedWork.jsx.
@@ -275,36 +383,30 @@ export default function usePlanetSystem(refs) {
       }
     })();
 
-    /* Load-and-run gate. The scene is only built once the section is close,
-       and only runs while it is on screen. */
-    /* Two thresholds, two jobs. 0 starts and stops the render loop, which
-       wants to be running the moment any part of the section can be seen.
-       ARRIVE_AT gates the arrival, which wants to be watched.
-
-       The old code did the second job at the first threshold and skipped it
-       whenever the scene had not finished importing yet — nothing came back
-       to run it once the import landed, so the arrival could be missed
-       entirely or played off the bottom of the screen. */
+    /* Run gate: the render loop runs only while any part of the section can
+       be seen. The arrival used to be gated here too, on a visibility ratio
+       and a timer; it is read off the scroll now (applyArrival) and needs no
+       gate — off screen, the scrub still places the planets, and the first
+       frame on screen draws them where they are. */
     const vis = new IntersectionObserver(
       ([entry]) => {
         onScreen = entry.isIntersecting;
-        if (onScreen) {
-          start();
-          if (entry.intersectionRatio >= ARRIVE_AT) {
-            seen = true;
-            tryArrive();
-          }
-        } else stop();
+        if (onScreen) start();
+        else stop();
       },
-      { threshold: [0, ARRIVE_AT] }
+      { threshold: 0 }
     );
     vis.observe(section);
+    applyArrival();
 
     canvas.addEventListener("pointerdown", onDown);
     window.addEventListener("pointerup", onUp);
+    window.addEventListener("pointercancel", onCancel);
     window.addEventListener("pointermove", onMove);
     // passive:false — in detail this handler calls preventDefault.
     window.addEventListener("wheel", onWheel, { passive: false });
+    window.addEventListener("scroll", onScroll, { passive: true });
+    if ("onscrollend" in window) window.addEventListener("scrollend", onScrollEnd);
     window.addEventListener("keydown", onKey);
     window.addEventListener("resize", onResize);
     document.addEventListener("visibilitychange", onVisibility);
@@ -316,8 +418,12 @@ export default function usePlanetSystem(refs) {
       if (wheelLock) window.clearTimeout(wheelLock);
       canvas.removeEventListener("pointerdown", onDown);
       window.removeEventListener("pointerup", onUp);
+      window.removeEventListener("pointercancel", onCancel);
       window.removeEventListener("pointermove", onMove);
       window.removeEventListener("wheel", onWheel);
+      window.removeEventListener("scroll", onScroll);
+      window.removeEventListener("scrollend", onScrollEnd);
+      if (carryTimer) window.clearTimeout(carryTimer);
       window.removeEventListener("keydown", onKey);
       window.removeEventListener("resize", onResize);
       document.removeEventListener("visibilitychange", onVisibility);
