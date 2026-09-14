@@ -427,7 +427,9 @@
   padding-top: 0.7rem;
   border-top: 1px solid var(--line);
   font-family: var(--f-mono);
-  font-size: 0.64rem;
+  /* Was a flat 0.64rem, which computes to 10.2px on every device and sits
+     under the 11px floor this site holds itself to on a phone. */
+  font-size: clamp(0.7rem, 0.9vw, 0.75rem);
   letter-spacing: 0.14em;
   text-transform: uppercase;
 }

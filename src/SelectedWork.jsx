@@ -162,6 +162,11 @@ export default function SelectedWork() {
           there. (open() in usePlanetSystem.js still handles being called with
           a project while another is open — it steps instead of opening — so
           this can come back if the panel ever narrows.) */}
+      {/* The names and the invitation as ONE positioned block. The bar wraps
+          to three rows on a phone and one on a desktop, so anything placed
+          under it by a fixed offset is wrong at every width but the one it
+          was measured at. Positioned as a pair, the gap is a gap. */}
+      <div className="pw-top">
       <nav className="pw-bar" aria-label="Projects">
         <ul>
           {PLANETS.map((p, i) => (
@@ -182,6 +187,18 @@ export default function SelectedWork() {
           ))}
         </ul>
       </nav>
+
+      {/* The invitation, under the names. Quiet on purpose: the bar above it
+          is what a reader who does not want to play with a 3D scene will use,
+          and this is for the one who might. It says the orbit is a thing you
+          touch, which is the only part the bar cannot say.
+
+          It rides the arrival in with the planets and stands down with the
+          bar while a case study is open, so it never sits over the panel.
+          Unlike .sector-hint, which hud.css hides below 900px, this shows at
+          every width — a phone reader needs it more, not less. */}
+      <p className="pw-invite">Click a planet and start exploring!</p>
+      </div>
 
       <div className="pw-stage">
         <canvas className={`pw-canvas ${ready ? "is-ready" : ""}`} ref={canvasRef} aria-hidden="true" />
@@ -385,7 +402,10 @@ export default function SelectedWork() {
           ? reduced
             ? "← → to move between projects · Esc to go back"
             : "Drag to inspect · scroll or ← → to move · Esc to go back"
-          : "Drag to tilt the orbit · select a planet to open it"}
+          : /* "Select a planet to open it" moved up to .pw-invite, where it
+               is legible and where a phone can see it. What is left here is
+               the extra a curious reader can find. */
+            "Drag to tilt the orbit"}
       </p>
     </section>
     </div>

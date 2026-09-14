@@ -415,3 +415,8 @@ main {
     transform: none;
   }
 }
+
+/* The contact list's key labels were 9.9px on a phone. */
+@media (max-width: 640px) {
+  .ft-key { font-size: 0.7rem; }
+}

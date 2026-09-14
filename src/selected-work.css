@@ -595,10 +595,13 @@
      Getaway Tours is three lines and everything else is one or two. */
   .pw-tile-orb { width: clamp(2.4rem, 11vw, 3rem); }
   .pw-tile-tag {
-    font-size: 0.61rem;
+    font-size: 0.7rem; /* up from 0.61rem, which was 9.8px on a phone */
     letter-spacing: 0.07em;
     padding: 0.42rem 0.34rem;
-    min-height: 3.5rem;
+    /* Raised with the font, as the note above says to: three lines at 0.7rem
+       plus the padding is about 61px, and at the old 3.5rem Gourmet Getaway
+       Tours stood taller than the boxes either side of it. */
+    min-height: 3.9rem;
   }
   .pw-label .n { display: none; }
 }
@@ -652,25 +655,41 @@
    The lesson it left: the fix is not a better hint, it is putting the work
    itself where it is read first.
    ========================================================================== */
-.pw-bar {
+/* The names and the invitation, as ONE positioned block. The bar wraps to
+   three rows on a phone and one on a desktop, so a line placed under it by a
+   fixed offset is wrong at every width but the one it was measured at.
+   Positioned as a pair, the gap is a gap.
+
+   Named .pw-top, not .pw-head: .pw-head is already the case study panel's
+   header further up this file. */
+.pw-top {
   position: absolute;
   z-index: 6;
   top: clamp(2.9rem, 7.5vh, 4.2rem);
-  left: clamp(1rem, 3vw, 2.25rem);
-  right: clamp(1rem, 3vw, 2.25rem);
+  left: 0;
+  right: 0;
   display: flex;
-  justify-content: center;
-  /* Rides the arrival in with the planets, the same as the HUD and the frame
-     — see --sw-in. Naming seven projects that have not landed yet would be
+  flex-direction: column;
+  align-items: center;
+  gap: clamp(0.45rem, 1.2vh, 0.8rem);
+  /* Rides the arrival in with the planets, the same as the HUD and the frame.
+     See --sw-in. Naming seven projects that have not landed yet would be
      pointing at an empty frame. */
   opacity: var(--sw-in);
   transition: opacity 0.35s ease, visibility 0s;
 }
 
+.pw-bar {
+  max-width: 100%;
+  padding: 0 clamp(1rem, 3vw, 2.25rem);
+  display: flex;
+  justify-content: center;
+}
+
 /* Down with the strip while a case study is open: the panel is 58vw and would
    cover it from the fourth name onward, leaving three reachable names and a
    highlight nobody can see. */
-.sw.is-open .pw-bar {
+.sw.is-open .pw-top {
   opacity: 0;
   visibility: hidden;
   transition: opacity 0.35s ease, visibility 0s linear 0.35s;
@@ -739,22 +758,96 @@
    give up the room.
    ========================================================================== */
 @media (max-width: 900px) {
-  .pw-bar {
+  .pw-top {
     top: clamp(2.6rem, 6.5vh, 3.4rem);
-    left: clamp(0.5rem, 2vw, 1rem);
-    right: clamp(0.5rem, 2vw, 1rem);
+    gap: 0.4rem;
   }
+  .pw-invite { padding: 0 1rem; font-size: 0.72rem; }
+
+  /* ONE ROW THAT SCROLLS, not a wrapping block. Wrapping was behind two
+     separate failures: at 344px wide the bar grew to enough rows to collide
+     with the HUD header above it, and the only way to keep it short was type
+     at 8.3px, which nobody can read. Scrolling keeps it one row tall at any
+     project count, so the type can be readable AND the chips can be a real
+     tap target. The part-visible chip at the right edge is what says there is
+     more to the side. */
+  .pw-bar { width: 100%; padding: 0; }
   .pw-bar ul {
-    /* A pill is the wrong shape once the row wraps: the corners stop being
-       round ends and start being a blob. A small radius reads as a panel of
-       chips, which is what it becomes here. */
+    flex-wrap: nowrap;
+    justify-content: flex-start;
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+    scroll-snap-type: x proximity;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+    margin: 0 clamp(0.5rem, 2vw, 1rem);
+    /* A pill is the wrong shape for a scroller: the round ends read as a blob
+       once the content runs past them. A small radius reads as a strip of
+       chips, which is what this is here. */
     border-radius: 10px;
     padding: 0.22rem;
     gap: 0.15rem;
   }
+  .pw-bar ul::-webkit-scrollbar { display: none; }
+  .pw-bar li { scroll-snap-align: center; }
   .pw-bar-item {
-    padding: 0.32rem 0.5rem;
-    font-size: 0.52rem;
+    padding: 0.55rem 0.6rem;
+    min-height: 2.5rem; /* 40px: a finger, not a pixel */
+    font-size: 0.7rem; /* 11.2px, up from 8.3px */
     letter-spacing: 0.06em;
   }
+}
+
+/* ---- the invitation ------------------------------------------------------ *
+   "Click a planet and start exploring!", under the name bar. Quiet on
+   purpose: the bar above it is the way in for a reader who does not want to
+   play with a 3D scene, and this is for the one who might. It says the orbit
+   is a thing you touch, which is the only part the bar cannot say.
+
+   Not the gold call-to-action that was tried and rejected earlier in the day.
+   That one shouted; this one is a line of text under a control that already
+   works.                                                                   */
+.pw-invite {
+  max-width: 100%;
+  margin: 0;
+  padding: 0 clamp(1rem, 3vw, 2.25rem);
+  font-size: clamp(0.72rem, 1vw, 0.82rem);
+  letter-spacing: 0.01em;
+  text-align: center;
+  color: var(--ink-soft);
+  pointer-events: none;
+}
+
+/* ==========================================================================
+   TOUCH TARGETS. A pointer can hit a 26px button; a thumb cannot. Everything
+   here is a control a reader is meant to press, given at least 40px of height
+   on a device with no hover. The type is untouched - this is padding only, so
+   nothing reflows on a desktop.
+   ========================================================================== */
+@media (hover: none) {
+  /* Keyed off the POINTER, not the width. A tablet is 1024px wide and still
+     driven by a thumb, so the width-based bumps below 900px never reached it
+     and its name chips stayed 26px tall with 8.8px type. */
+  .pw-bar-item {
+    min-height: 2.5rem;
+    font-size: 0.7rem;
+    padding-block: 0.55rem;
+  }
+  .pw-back {
+    min-height: 2.5rem;
+    padding-inline: 1rem;
+    display: inline-flex;
+    align-items: center;
+  }
+  .pw-nav button { min-height: 2.5rem; }
+  .pw-live { min-height: 2.5rem; display: inline-flex; align-items: center; }
+}
+
+/* The HUD header wraps to two lines below about 360px ("SELECTED WORK" and
+   "07 LIVE / 00 INCOMING" no longer fit one), and the name bar's offset was
+   measured against a one-line header: at 344px the two overlapped by 8px.
+   A little more room from the top here, and only here. */
+@media (max-width: 360px) {
+  .pw-top { top: 4.4rem; }
 }

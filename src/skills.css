@@ -541,7 +541,12 @@
   .sk-arrow--prev { left: 0.1rem; }
   .sk-arrow--next { right: 0.1rem; }
   .sk-tabs { width: 100%; padding: 0.22rem; }
-  .sk-tab { padding: 0.45rem 0.2rem; font-size: 0.55rem; letter-spacing: 0.08em; }
+  .sk-tab {
+    padding: 0.6rem 0.2rem;
+    min-height: 2.5rem; /* 40px */
+    font-size: 0.7rem;  /* 11.2px, up from 8.8px */
+    letter-spacing: 0.06em;
+  }
   .sk-tabs-lit {
     top: 0.22rem;
     bottom: 0.22rem;
@@ -577,4 +582,31 @@
   .sk-panel { transition: border-color 0.25s ease, opacity 0.25s ease; }
   .sk-panel:hover,
   .sk-panel:focus-within { transform: none; }
+}
+
+/* ==========================================================================
+   TOUCH TARGETS, same rule as Selected Work: at least 40px of height for
+   anything a thumb is meant to find. Padding only, so a desktop is unchanged.
+   ========================================================================== */
+@media (hover: none) {
+  /* Same rule as Selected Work: a tablet is wide and still a thumb. */
+  .sk-tab {
+    min-height: 2.5rem;
+    font-size: 0.7rem;
+  }
+  .sk-arrow { width: 2.5rem; height: 2.5rem; }
+  .sk-filter {
+    min-height: 2.5rem;
+    display: inline-flex;
+    align-items: center;
+    padding-inline: 0.6rem;
+  }
+}
+
+/* Two labels a phone reader actually needs to read, up to the 11px floor:
+   the count row and the gold project names beside a stack. Both were 9px at
+   390 wide. The 01/04 index stays small; it is decoration. */
+@media (max-width: 900px) {
+  .sk-count { font-size: 0.7rem; }
+  .sk-used { font-size: 0.68rem; }
 }
