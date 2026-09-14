@@ -126,14 +126,30 @@
       "leadImage": null,
       "logo": "logo-kwento-kard.jpg",
       "note": "Role, result and live URL still to come from Augniña. Screenshots pending."
-    }
-  ],
-  "onHold": [
+    },
     {
       "id": "socialhat",
       "name": "SocialHat",
-      "reason": "Under development. Hold until further along.",
-      "logo": "logo-socialhat.jpg"
+      "tagline": "Website redesign for a Perth digital marketing and content agency.",
+      "status": null,
+      "liveUrl": null,
+      "role": "Full Stack Developer",
+      "problem": "SocialHat's 15-year-old website was outdated and losing them leads — a broken/unsorted portfolio, a mobile experience with pinch-to-zoom disabled, a clunky maths-captcha contact form, and a “New Field” that didn't even work on the Recent Work page. For a marketing agency whose whole pitch is “image is everything,” the site wasn't doing their own image any favors.",
+      "whatIBuilt": "A full UI overhaul across key pages (mobile-friendly, pinch-to-zoom restored), a smart adaptive inquiry form that routes leads by type (client / website / signage host / advertiser), a 24/7 AI assistant trained on SocialHat's services, a filterable portfolio (Video / Web / Signage / Social), and a live Instagram feed embed — plus speed and foundational SEO fixes. Built on the site's existing WordPress + Divi stack, which was retained.",
+      "result": null,
+      "stack": [
+        "WordPress",
+        "Divi",
+        "All in One SEO",
+        "SiteGround",
+        "Lead-routing form",
+        "AI assistant"
+      ],
+      "images": [],
+      "leadImage": null,
+      "logo": "logo-socialhat.jpg",
+      "note": "Copy from Augnina 2026-09-15. STILL NEEDED: the Result line (renders as // TODO without it), a live URL, and the hero screenshot she sent in chat (not on disk — save it to Portfolio/ and it becomes images[]). Tagline written here, not hers. Stack chips shortened from her four lines: “WordPress + Divi (existing CMS/theme, retained)”, “All in One SEO”, “SiteGround hosting (Speed Optimizer, Security Optimizer)”, “Custom lead-routing form + AI chat assistant”."
     }
-  ]
+  ],
+  "onHold": []
 }
