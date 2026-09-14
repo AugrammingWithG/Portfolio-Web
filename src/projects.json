@@ -10,9 +10,15 @@
       "problem": "The client needed a booking flow that actually converts and a site people could find on search.",
       "whatIBuilt": "I built the site end to end, both the customer-facing pages and the booking logic behind them, and moved reservations onto a more reliable booking platform so the flow was smoother. I also handled on-page SEO.",
       "result": "More completed bookings, more new customers, and higher search visibility.",
-      "stack": ["TypeScript"],
-      "images": ["ggt-home.png", "ggt-tours.png"],
-      "leadImage": "ggt-home.png"
+      "stack": [
+        "TypeScript"
+      ],
+      "images": [
+        "ggt-home.png",
+        "ggt-tours.png"
+      ],
+      "leadImage": "ggt-home.png",
+      "logo": "logo-gourmet-getaway-tours.png"
     },
     {
       "id": "oxilia",
@@ -24,10 +30,17 @@
       "problem": "The team was spread across separate tools for messaging, scheduling, and tracking work.",
       "whatIBuilt": "I built full-stack features for a single app that brings it together: team chat with channels and direct messages, a shared calendar, project boards, a CRM, video calls, and a visual view of the whole development cycle from request to handoff.",
       "result": "Shipped to production and now the team's daily tool, with a mobile version being prepped for the Play Store.",
-      "stack": ["React", "Node.js"],
-      "images": ["oxilia-workspace.png", "oxilia-dev-cycle.png"],
+      "stack": [
+        "React",
+        "Node.js"
+      ],
+      "images": [
+        "oxilia-workspace.png",
+        "oxilia-dev-cycle.png"
+      ],
       "leadImage": "oxilia-workspace.png",
-      "note": "Teammate names and chat text in oxilia-workspace.png were already blurred at the source. Verified 2026-09-03; nothing left to redact."
+      "note": "Teammate names and chat text in oxilia-workspace.png were already blurred at the source. Verified 2026-09-03; nothing left to redact.",
+      "logo": "logo-oxilia.jpg"
     },
     {
       "id": "mealplanner",
@@ -40,8 +53,15 @@
       "problem": "The client wanted to plan meals and track nutrition while keeping their data private.",
       "whatIBuilt": "I built the full app and its data layer: a dashboard with calories and macros, a meal planner, recipes, a grocery list, and water, exercise, and weight trackers. Daily nutrient goals follow the Philippine national nutrition standards, and the data stays on the phone, with only login going online.",
       "result": "Live and in active daily use.",
-      "stack": ["React Native"],
-      "images": ["mealplanner-menu.png", "mealplanner-dashboard.png", "mealplanner-meals.png", "mealplanner-trackers.png"],
+      "stack": [
+        "React Native"
+      ],
+      "images": [
+        "mealplanner-menu.png",
+        "mealplanner-dashboard.png",
+        "mealplanner-meals.png",
+        "mealplanner-trackers.png"
+      ],
       "leadImage": "mealplanner-dashboard.png"
     },
     {
@@ -54,9 +74,15 @@
       "problem": "The store needed an online presence that matched its buy-only-what-you-need idea and made shopping easy.",
       "whatIBuilt": "I overhauled the storefront's design and smoothed the whole flow from browsing collections to checkout, including a playful touch where you tap a jar to \"fill\" it.",
       "result": "Live and serving a high volume of shoppers.",
-      "stack": ["Shopify"],
-      "images": ["tingi-hero.png", "tingi-how-it-works.png"],
-      "leadImage": "tingi-hero.png"
+      "stack": [
+        "Shopify"
+      ],
+      "images": [
+        "tingi-hero.png",
+        "tingi-how-it-works.png"
+      ],
+      "leadImage": "tingi-hero.png",
+      "logo": "logo-tingi-station.jpg"
     },
     {
       "id": "aicore",
@@ -69,17 +95,45 @@
       "problem": "Raw 3D scan data is messy and hard to read, and this has to hold up in a courtroom.",
       "whatIBuilt": "I built the frontend and the interactive 3D viewer that turns raw scan data into a clean, navigable model you can move around and measure.",
       "result": "A production build now in beta testing with forensic teams.",
-      "stack": ["React", "3D web tools"],
+      "stack": [
+        "React",
+        "3D web tools"
+      ],
+      "images": [
+        "aicore-3d.png"
+      ],
+      "leadImage": "aicore-3d.png",
+      "note": "Video is a phone recording of the viewer in use (56s, re-encoded to 720p/7MB). aicore-3d.png is the Gaussian-splat -> mesh before/after still.",
+      "logo": "logo-aicore.jpg",
+      "video": "aicore-viewer.mp4",
+      "videoPoster": "aicore-viewer-poster.jpg"
+    },
+    {
+      "id": "kwento-kard",
+      "name": "Kwento Kard",
+      "tagline": "Filipino-themed, AR-powered business cards. Every card tells a kwento (story).",
+      "status": "in-progress",
+      "liveUrl": null,
+      "role": null,
+      "problem": "A printed business card can only hold so much. Kwento Kard lets anyone turn theirs into an augmented-reality experience that lives on top of the card itself.",
+      "whatIBuilt": "A React web app: upload a photo of your business card, then plan in 3D by dropping floating text, tappable link buttons, image and media planes, and 3D shapes right on top of it and moving, rotating, and scaling them. Export gives a shareable link and a QR code that encodes the whole design. Anyone who opens the link and points their phone at the printed card sees the AR content anchored to it, using image-tracking AR.",
+      "result": null,
+      "stack": [
+        "React",
+        "WebAR"
+      ],
       "images": [],
       "leadImage": null,
-      "note": "Visual pending: recording a before/after of the 3D reconstruction. Slot in when ready."
+      "logo": "logo-kwento-kard.jpg",
+      "note": "Role, result and live URL still to come from Augniña. Screenshots pending."
     }
   ],
   "onHold": [
     {
       "id": "socialhat",
       "name": "SocialHat",
-      "reason": "Under development. Hold until further along."
+      "reason": "Under development. Hold until further along.",
+      "logo": "logo-socialhat.jpg"
     }
   ]
 }

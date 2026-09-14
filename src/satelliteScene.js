@@ -29,12 +29,10 @@
    ========================================================================== */
 
 import { PROCESS } from "./process.js";
+import { clamp01, ease } from "./scrollTimeline.js";
 
 const GOLD = 0xb8892b; // the site's one accent, and the reference's
 const GOLD_HI = 0xe0a838;
-
-const clamp01 = (v) => (v < 0 ? 0 : v > 1 ? 1 : v);
-const ease = (t) => t * t * (3 - 2 * t); // the reference's smoothstep
 
 /* The reference scatters the solar cells with Math.random(), so it comes
    apart differently on every reload. Same spread, seeded, so the shape is
@@ -47,13 +45,49 @@ function rng(seed) {
   };
 }
 
-/* The timeline, in the reference's terms:
-     0    .. HALF   the satellite comes apart
-     HALF .. 1      the pieces recede and dissolve, the camera eases forward
-   HALF is the reference's 0.5. The pieces are gone by about 0.88, and the
-   last stretch is the approach — the hero's own sky, and then Selected Work
-   rising into it. */
+/* THE TIMELINE, all of it, in one place. Two inputs:
+
+     cur      progress down the hero runway, 0..1, eased by the hook's chase
+     arrival  progress through Selected Work's pinned stretch, 0..1, raw
+
+   and on them, in order:
+
+     0    .. HALF        the satellite comes apart; captions run in the
+                         windows process.js gives them
+     HALF .. 1           the pieces recede and the camera eases forward
+     0.62 .. 0.84        the hero's sky goes out (skyFade)
+     0.8  .. 0.99        the pieces dissolve (satFade)
+     0.84 .. 0.96        the jump comes up (warp) — streaks, and the bloom
+                         flares and swells
+     0.88 .. 0.99        the hand-over ground comes up (ground)
+     1  · arrival 0      Selected Work pins
+     arrival 0 .. 0.25   the ground clears
+     arrival 0.14 .. 0.66 the jump goes down
+     arrival 0.46 .. 0.9 this whole layer leaves (fade)
+
+   Everything that ends near 0.99 ends there so the pin is a seam and not a
+   beat. The ways OUT — ground, warp, fade — run on the raw arrival rather
+   than the eased cur: the point of them is that the layer is off the planets
+   before anyone can drag one, and an eased value misses that whenever the
+   scroll arrives in one jump (an anchor link, a restored position). The
+   hook used to hold these three; they are here now so the dissolve and the
+   space it dissolves into cannot drift apart across two files.
+
+   HALF is the reference's 0.5. */
 const HALF = 0.5;
+
+const groundAt = (cur, arrival) =>
+  ease(clamp01((cur - 0.88) / 0.11)) * (1 - ease(clamp01(arrival / 0.25)));
+/* THE JUMP IS THE LONGEST-WORKED FRAME ON THE PAGE, so it is allowed to
+   hold. It used to be full only from progress 0.97 to arrival 0.08 and gone
+   by 0.48, which on a 900-tall window is about 150px of scroll at full and
+   520 fading — and the carry-in (usePlanetSystem.js) crossed all of it in one
+   browser smooth-scroll. It now holds to arrival 0.14 and fades to 0.66, and
+   the layer carrying it waits until 0.46 to start leaving rather than dimming
+   the streaks from 0.35 while they are still the subject. */
+const warpAt = (cur, arrival) =>
+  ease(clamp01((cur - 0.84) / 0.12)) * (1 - ease(clamp01((arrival - 0.14) / 0.52)));
+const fadeAt = (arrival) => 1 - clamp01((arrival - 0.46) / 0.44);
 
 /* How long a step's caption spends fading in and out, in progress units. The
    windows in process.js overlap by about this much, so one step is always
@@ -162,7 +196,7 @@ export async function createScene(canvas) {
   /* ---- the jump ---------------------------------------------------------- *
      A second, streaming field for the hand-over, separate from the shell
      above. A tube of stars around the line of flight that exists only while
-     `warp` is up (warpAt() in useSatelliteFlight.js). Each star is drawn
+     `warp` is up (warpAt() at the top of this file). Each star is drawn
      twice: a head (Points) and a tail (LineSegments) that runs away from the
      camera along z, so on screen every tail points back at the vanishing
      point and the field reads as streaming past. Tail length and speed both
@@ -458,21 +492,21 @@ export async function createScene(canvas) {
     glowScale: 1,
     heroFade: 1,
     skyFade: 1,
+    ground: 0,
+    fade: 1,
+    /* True while something on this canvas moves on its own — the satellite
+       while it is visible, the jump while it streams. The hook keeps the
+       loop running while this is set and stops it otherwise; everything else
+       here only changes when the scroll does. */
+    live: true,
     p: 0,
     notes: PROCESS.map(() => ({ x: 50, y: 50, o: 0 })),
   };
 
-  /* `space` is how far the hand-over ground has come up (groundAt() in
-     useSatelliteFlight.js). The star field brightens and swells with it: at
-     0.5 opacity these stars are a sky behind the aurora, but over the flat
-     near-black of the hand-over they all but vanish and the frame reads as
-     empty. Pushed toward the planet scene's own field (size 0.09, opacity
-     0.55) so the two cross-fade as the same stars rather than a faint set
-     cutting to a bright one. */
-  /* `warp` is the jump, 0..1 (warpAt() in useSatelliteFlight.js): it
-     streams the tube of stars, and it flares and swells the bloom. */
-  function update(e, space = 0, warp = 0) {
+  function update(e, arrival = 0) {
     const cur = clamp01(e);
+    const ground = groundAt(cur, arrival);
+    const warp = warpAt(cur, arrival);
     stepJump(warp);
     const seg1 = clamp01(cur / HALF);
     const seg2 = ease(clamp01((cur - HALF) / (1 - HALF)));
@@ -497,20 +531,22 @@ export async function createScene(canvas) {
     camera.position.lerpVectors(CAM0, CAM1, seg2);
     camera.lookAt(0, -seg2 * 0.3, seg2 * -1.5);
 
-    /* The dissolve. Solid while it is still the hero's object, gone by the
-       time it would be a speck — so what recedes into the nebula is the
-       nebula, not a dark shape laid over it. */
-    /* On the raw progress, not seg2, so it reads as a place on the runway:
-       solid to 0.8, gone at 0.99 — as Selected Work pins
-       and the planets start out of the same dark. */
+    /* The dissolve, on the raw progress so it reads as a place on the runway:
+       solid to 0.8, gone at 0.99 as Selected Work pins, so what recedes into
+       the dark is the dark and the planets start out of the same one. */
     const satFade = 1 - ease(clamp01((cur - 0.8) / 0.19));
     for (const m of satMats) m.opacity = satFade;
     sat.visible = satFade > 0.004;
 
     world.position.set(offsetX * (1 - seg2), offsetY * (1 - seg2 * 0.5), 0);
     world.scale.setScalar(worldScale);
-    starMat.opacity = 0.16 + seg2 * 0.34 + space * 0.35;
-    starMat.size = 0.09 * (1 + space * 0.9);
+    /* The star field brightens and swells with the ground: at 0.5 opacity
+       these stars are a sky behind the aurora, but over flat near-black they
+       all but vanish and the frame reads as empty. Pushed toward the planet
+       scene's own field (size 0.09, opacity 0.55) so the two cross-fade as
+       the same stars rather than a faint set cutting to a bright one. */
+    starMat.opacity = 0.16 + seg2 * 0.34 + ground * 0.35;
+    starMat.size = 0.09 * (1 + ground * 0.9);
 
     /* ---- the annotation layer ------------------------------------------- *
        Each step's caption is a fixed point in the margin; the end of its
@@ -522,9 +558,10 @@ export async function createScene(canvas) {
        stretch before 0.08 and after 0.76 there is no note up, and projecting
        five anchors for nobody costs a full matrix walk every frame.
 
-       satFade gates the lot. The parts start dissolving at progress 0.61, and
-       a leader line still pointing confidently at a part that has faded out
-       from under it is the one failure mode this layer has.                 */
+       satFade gates the lot. The windows in process.js all close before the
+       dissolve starts, so today this is a safety net — but a leader line
+       still pointing confidently at a part that has faded out from under it
+       is the one failure mode this layer has, and the net stays.           */
     let live = false;
     for (let i = 0; i < PROCESS.length; i += 1) {
       const a = windowAlpha(cur, PROCESS[i].in, PROCESS[i].out) * clamp01(satFade * 2.2);
@@ -570,11 +607,9 @@ export async function createScene(canvas) {
     state.glow = clamp01(Math.max(0.14 + seg1 * 0.7 * (1 - seg2 * 0.86), warp * 0.8));
     state.glowScale = 1 + warp * 0.6;
     state.glowX = 50 + ((offsetX * (1 - seg2)) / (camera.position.z * TAN * camera.aspect)) * 50;
-    /* The layer's own fade is NOT computed here. It is the hand-over to
-       Selected Work, so it has to track the real scroll rather than the eased
-       value this function runs on — see useSatelliteFlight.js. Easing it left
-       the satellite painting over the planet system for as long as the chase
-       took to catch up, which is very visible on a jump to #work. */
+    state.ground = ground;
+    state.fade = fadeAt(arrival);
+    state.live = sat.visible || warp > 0.002;
     return state;
   }
 

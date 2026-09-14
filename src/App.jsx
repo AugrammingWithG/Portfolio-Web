@@ -2,7 +2,7 @@ import React, { useRef } from "react";
 import Hero from "./Hero.jsx";
 import SatelliteHero from "./SatelliteHero.jsx";
 import usePointerFx from "./usePointerFx.js";
-import SkillsKeyboard from "./SkillsKeyboard.jsx";
+import Skills from "./Skills.jsx";
 import SelectedWork from "./SelectedWork.jsx";
 import Footer from "./Footer.jsx";
 
@@ -48,7 +48,7 @@ export default function App() {
       <main id="main">
         <Hero />
         <SelectedWork />
-        <SkillsKeyboard />
+        <Skills />
       </main>
 
       <Footer />

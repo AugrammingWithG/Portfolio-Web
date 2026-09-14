@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { PROCESS } from "./process.js";
+import { readProgress, readArrival, quantisedWriter } from "./scrollTimeline.js";
 
 /* ==========================================================================
    The satellite's lifecycle and its binding to the page.
@@ -17,51 +18,19 @@ import { PROCESS } from "./process.js";
    The canvas is fixed and page-wide because it has to outlive the one screen
    the hero occupies.
 
-   The two ends are found by id (#top and #work) rather than by threading refs
+   Progress and arrival are read from scrollTimeline.js, which finds the
+   runways by id (#top, #work, #work-landed) rather than by threading refs
    from App down two levels: this component is mounted outside <main> so the
    canvas can span the page, and it has no other relationship to either
-   section. If either id ever moves, the flight quietly does nothing rather
-   than mis-scaling.
+   section. If an id ever moves, the flight quietly does nothing rather than
+   mis-scaling. The planet hook reads the same two numbers from the same
+   file, so the layer's exit and the planets' arrival cannot drift apart.
 
    NOTHING GOES THROUGH REACT. Every value the flight produces — the glow, the
    canvas fade, the glow's horizontal position, the hero copy's fade — moves
    every frame and is written straight onto its element as a custom property.
    A re-render a frame would cost far more than the gradient it repaints.
    ========================================================================== */
-
-const clamp01 = (v) => (v < 0 ? 0 : v > 1 ? 1 : v);
-const ease = (t) => t * t * (3 - 2 * t); // the scene's smoothstep
-
-/* 0 at the top of the hero, 1 where Selected Work meets the top of the
-   viewport. Two rect reads per scroll event. */
-function readProgress() {
-  const hero = document.getElementById("top");
-  const work = document.getElementById("work");
-  if (!hero || !work) return 0;
-
-  const y = window.scrollY || window.pageYOffset || 0;
-  const start = y + hero.getBoundingClientRect().top;
-  const end = y + work.getBoundingClientRect().top;
-  const span = end - start;
-  if (span <= 0) return 0;
-  return clamp01((y - start) / span);
-}
-
-/* The stretch after that: 0 as Selected Work pins, 1 when its runway is used
-   up. The same reading usePlanetSystem.js makes of the same element, so the
-   layer's exit and the planets' arrival cannot drift apart. #work is the
-   runway; its sticky section is the first element child. A runway with no
-   spare height (reduced motion) reads as landed. */
-function readArrival() {
-  const work = document.getElementById("work");
-  if (!work) return 1;
-  const section = work.querySelector(".sw");
-  const span = work.offsetHeight - (section ? section.offsetHeight : 0);
-  if (span <= 0) return 1;
-  const y = window.scrollY || window.pageYOffset || 0;
-  const top = y + work.getBoundingClientRect().top;
-  return clamp01((y - top) / span);
-}
 
 export default function useSatelliteFlight(canvasRef, layerRef, notesRef) {
   const [ready, setReady] = useState(false);
@@ -88,6 +57,28 @@ export default function useSatelliteFlight(canvasRef, layerRef, notesRef) {
     let vw = window.innerWidth;
     let vh = window.innerHeight;
 
+    /* WHERE EACH LEADER LINE STARTS, in px. This used to be computed from
+       step.x/step.y in process.js, which is only true at the width those
+       percentages were written for: below 900px the captions are re-parked
+       by CSS (one column, low on the screen — see satellite.css) and the
+       line was being aimed from a point the caption is not at. That is why
+       narrow screens had no pointing at all; the rule that hid the line was
+       covering for geometry that would have been wrong.
+
+       So the origin is MEASURED instead — .sat-note is a zero-sized point, so
+       its own rect is the origin, whatever the stylesheet has done with it.
+       Measured on resize only, never in the loop: the layout read is the
+       thing this file is otherwise careful to keep out of the frame. */
+    const originX = items.map(() => 0);
+    const originY = items.map(() => 0);
+    const measureOrigins = () => {
+      for (let i = 0; i < items.length; i += 1) {
+        const r = items[i].getBoundingClientRect();
+        originX[i] = r.left;
+        originY[i] = r.top;
+      }
+    };
+
     const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     setReduced(reduce);
 
@@ -107,41 +98,18 @@ export default function useSatelliteFlight(canvasRef, layerRef, notesRef) {
        of the tab order once it is invisible; opacity alone would leave three
        focusable links behind a satellite. */
     const root = document.documentElement;
-    let lastHero = -1;
-    let lastSky = -1;
+    const writeHero = quantisedWriter(root, "--hero-fade");
+    const writeSky = quantisedWriter(root, "--sky-fade");
 
-    /* THE HAND-OVER TO SELECTED WORK, in two values.
-
-       The layer does not stop at the section's edge any more. Selected Work
-       pins at the top of the viewport and holds for a stretch (see .sw-runway
-       in selected-work.css), and over that stretch the planets come forward
-       out of the depth the satellite went into. `arrival` is that stretch as
-       0..1, read from the same runway the planet hook reads it from, and the
-       layer leaves across it rather than at the edge, so the stars here hand
-       over to the planet scene's own stars instead of cutting to them.
-
-       `ground` is the space the satellite dissolves into. A near-black fill
-       on the layer, under the canvas: it comes up as the pieces go (eased
-       `current`, so it tracks the dissolve exactly) and clears again as the
-       system arrives (raw `arrival`, see below). While it is up it covers the
-       page, which is what hides the section sliding in underneath — with it,
-       what you see is the satellite gone into deep space and the planets
-       coming out of it, not one section scrolling over another.
-
-       Both take the raw scroll for their way OUT: the point of them is that
-       the layer is off the planets by the time anyone can drag one, and an
-       eased fade misses that whenever the scroll arrives in one jump — an
-       anchor link to #work-landed, a restored position, a fast flick. */
-    const fadeAt = (arrival) => 1 - clamp01((arrival - 0.35) / 0.45);
-    /* The jump. Up as the last pieces go (eased, with the dissolve), held
-       through the pin, and down again over the first half of the arrival
-       (raw, so it is over before anything can be dragged). The planets
-       decelerate into place as the streaks shorten — that is the whole
-       transition: not a black beat, a jump you arrive out of. */
-    const warpAt = (cur, arrival) =>
-      ease(clamp01((cur - 0.84) / 0.13)) * (1 - ease(clamp01((arrival - 0.08) / 0.4)));
-    const groundAt = (cur, arrival) =>
-      ease(clamp01((cur - 0.88) / 0.11)) * (1 - ease(clamp01(arrival / 0.25)));
+    /* THE HAND-OVER TO SELECTED WORK. Selected Work pins at the top of the
+       viewport and holds for a stretch (see .sw-runway in selected-work.css),
+       and over that stretch the planets come forward out of the depth the
+       satellite went into. `arrival` is that stretch as 0..1, and it is the
+       scene's second input: the ground the satellite dissolves into, the
+       jump, and this layer's own fade are all computed there, next to the
+       dissolve they belong with — see the timeline at the top of
+       satelliteScene.js. This hook only reads the scroll and writes what the
+       scene hands back. */
 
     /* The captions. Each is pinned at a fixed origin in the margin (--sx/--sy,
        set once as inline styles in SatelliteHero) and its leader line runs to
@@ -153,6 +121,7 @@ export default function useSatelliteFlight(canvasRef, layerRef, notesRef) {
        nothing until it comes back. Most frames only one or two of the five are
        live, so this skips the majority of the work. */
     const writeNotes = (s) => {
+      const heroFade = s.heroFade;
       for (let i = 0; i < items.length; i += 1) {
         const el = items[i];
         const slot = s.notes[i];
@@ -167,39 +136,49 @@ export default function useSatelliteFlight(canvasRef, layerRef, notesRef) {
           continue;
         }
 
-        const step = PROCESS[i];
-        const ox = (step.x / 100) * vw;
-        const oy = (step.y / 100) * vh;
+        const ox = originX[i];
+        const oy = originY[i];
         const dx = (slot.x / 100) * vw - ox;
         const dy = (slot.y / 100) * vh - oy;
 
         el.style.setProperty("--len", Math.round(Math.hypot(dx, dy)) + "px");
         el.style.setProperty("--ang", ((Math.atan2(dy, dx) * 180) / Math.PI).toFixed(2) + "deg");
         el.style.setProperty("--o", o.toFixed(3));
+        /* Only the narrow layout reads this. There the caption sits under the
+           satellite, in the column the hero's name and copy are still fading
+           out of, so the line waits for them to go rather than crossing them.
+           4x, not 1 - fade: at parity the line was already three quarters up
+           while the lede was still plainly readable underneath it. This holds
+           it until the copy is under a quarter opacity, which is step 3.
+           Wide screens park the captions in the margins, where there is
+           nothing to cross, and their CSS ignores it. */
+        el.style.setProperty("--line-o", Math.max(0, 1 - heroFade * 4).toFixed(3));
         lastO[i] = o;
       }
     };
 
-    const write = (s, fade, ground) => {
+    const write = (s) => {
       layer.style.setProperty("--sat-glow", s.glow.toFixed(3));
       layer.style.setProperty("--sat-glow-x", `${s.glowX.toFixed(1)}%`);
       layer.style.setProperty("--sat-glow-scale", s.glowScale.toFixed(3));
-      layer.style.setProperty("--sat-fade", fade.toFixed(3));
-      layer.style.setProperty("--sat-ground", ground.toFixed(3));
+      layer.style.setProperty("--sat-fade", s.fade.toFixed(3));
+      layer.style.setProperty("--sat-ground", s.ground.toFixed(3));
       writeNotes(s);
+      root.classList.toggle("is-flying", writeHero(s.heroFade) < 0.02);
+      writeSky(s.skyFade);
+    };
 
-      const hero = Math.round(s.heroFade * 100) / 100;
-      if (hero !== lastHero) {
-        lastHero = hero;
-        root.style.setProperty("--hero-fade", String(hero));
-        root.classList.toggle("is-flying", hero < 0.02);
-      }
-      // Same treatment as --hero-fade: on :root, quantised, written on change.
-      const sky = Math.round(s.skyFade * 100) / 100;
-      if (sky !== lastSky) {
-        lastSky = sky;
-        root.style.setProperty("--sky-fade", String(sky));
-      }
+    /* One frame: place everything at (cur, arrival), draw it, write it out. */
+    const paint = (cur, arr) => {
+      const s = scene.update(cur, arr);
+      scene.render();
+      write(s);
+      return s;
+    };
+
+    const read = () => {
+      target = readProgress();
+      arrival = readArrival();
     };
 
     function loop() {
@@ -207,15 +186,12 @@ export default function useSatelliteFlight(canvasRef, layerRef, notesRef) {
       // Chase the scroll rather than snapping to it, exactly as the reference
       // does: the wheel arrives in jumps and a raw binding stutters.
       current += (target - current) * 0.1;
-      const ground = groundAt(current, arrival);
-      const fade = fadeAt(arrival);
-      const s = scene.update(current, ground, warpAt(current, arrival));
-      scene.render();
-      write(s, fade, ground);
+      const s = paint(current, arrival);
 
-      // Nothing left to draw once the layer has handed over to Selected Work
-      // and the chase has caught up. onScroll starts it again.
-      if (fade <= 0.001 && Math.abs(target - current) < 0.001) {
+      /* Stop once nothing on the canvas moves on its own and the chase has
+         caught up. Everything else this layer shows is a function of the
+         scroll, and onScroll starts the loop again for one frame of that. */
+      if (!s.live && Math.abs(target - current) < 0.001) {
         raf = null;
         return;
       }
@@ -234,20 +210,18 @@ export default function useSatelliteFlight(canvasRef, layerRef, notesRef) {
     }
 
     const onScroll = () => {
-      target = readProgress();
-      arrival = readArrival();
+      read();
       start();
     };
     const onResize = () => {
       vw = window.innerWidth;
       vh = window.innerHeight;
+      measureOrigins();
       if (!scene) return;
       scene.resize();
-      target = readProgress();
-      arrival = readArrival();
+      read();
       if (reduce) {
-        write(scene.update(0), 1, 0);
-        scene.render();
+        paint(0, 0);
       } else {
         start();
       }
@@ -269,8 +243,7 @@ export default function useSatelliteFlight(canvasRef, layerRef, notesRef) {
           /* Reduced motion: the satellite whole, one frame, no fly-in and no
              planets. The sections below reveal themselves the way they always
              do — nothing here is holding them back. */
-          write(scene.update(0), 1, 0);
-          scene.render();
+          paint(0, 0);
           setReady(true);
           /* A fixed canvas that never moves would sit over Selected Work and
              Skills for the rest of the page, so it is dismissed once the hero
@@ -288,12 +261,10 @@ export default function useSatelliteFlight(canvasRef, layerRef, notesRef) {
           return;
         }
 
-        target = readProgress();
-        arrival = readArrival();
+        measureOrigins();
+        read();
         current = target;
-        const ground = groundAt(current, arrival);
-        write(scene.update(current, ground, warpAt(current, arrival)), fadeAt(arrival), ground);
-        scene.render();
+        paint(current, arrival);
         setReady(true);
         start();
       } catch (err) {

@@ -53,7 +53,7 @@ export default function Hero() {
        The runway carries #top and the ref, so the flight measures from the top
        of the block and useFlowField pauses on the whole block rather than on
        one screen of it. */
-    <section className="hero-runway" ref={sectionRef} id="top">
+    <section className="runway hero-runway" ref={sectionRef} id="top">
       <div className={`sector hero ${loaded ? "is-loaded" : ""}`}>
         {/* Near-black ground plus the aurora and the gold current, masked out at
             the bottom so the section hands over to the site's own ground. */}
@@ -107,6 +107,8 @@ export default function Hero() {
                   <span>{CONTACT.name}</span>
                 </span>
               </h1>
+
+              <p className="hero-lede">{CONTACT.lede}</p>
 
               <ul className="hero-links">
                 {LINKS.map((l) => (

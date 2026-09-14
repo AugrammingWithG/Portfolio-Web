@@ -19,6 +19,34 @@
   --ink-3: #8f8878;
 }
 
+/* ---- runways --------------------------------------------------------------- *
+   A tall block with a section stuck inside it, so the scroll is the animation.
+   The hero (the satellite's flight) and Selected Work (the planets' arrival)
+   are both this shape; each sets only its own height, which is its pacing.
+   The sticky section is exactly one viewport, and min-height: 0 is there
+   because .sector's floor below would otherwise fight it. Reduced motion has
+   no scrub, so the runway collapses to its section and the section is an
+   ordinary one again; each runway file zeroes its own height in the same
+   media block, next to the height it set. */
+.runway {
+  position: relative;
+}
+.runway > .sector {
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  height: 100dvh;
+  min-height: 0;
+}
+@media (prefers-reduced-motion: reduce) {
+  .runway > .sector {
+    position: relative;
+    height: auto;
+    min-height: 100vh;
+    min-height: 100dvh;
+  }
+}
+
 .sector {
   position: relative;
   isolation: isolate;

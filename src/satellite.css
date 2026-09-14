@@ -38,9 +38,10 @@
   inset: 0;
   z-index: 2;
   pointer-events: none;
-  /* Written by the render loop. It reaches 0 just as Selected Work arrives,
-     so the satellite is gone before the planet system is on screen rather
-     than painting over it. */
+  /* Written by the render loop from the scene's fade (satelliteScene.js): the
+     layer stays up through the pin and leaves over the first part of the
+     arrival, so its stars hand over to the planet scene's instead of cutting
+     to them. It is at 0 well before anything can be dragged. */
   opacity: var(--sat-fade, 1);
 }
 
@@ -49,7 +50,7 @@
    hand-over. It is the space the satellite dissolves into: the hero's own
    near-black, coming up under the stars as the last pieces go and clearing
    again as the planets come forward (--sat-ground, written by the flight —
-   see groundAt() in useSatelliteFlight.js). While it is up it covers the
+   see groundAt() in satelliteScene.js). While it is up it covers the
    section sliding in underneath, which is the point: the viewer sees deep
    space, then planets emerging from it, never one section scrolling over
    another. Opacity only, on a flat fill: nothing here blurs or blends.      */
@@ -280,6 +281,9 @@
   margin-right: 0.65em;
 }
 
+/* "/ 05". Off by default; the narrow layout turns it on. */
+.sat-note-of { display: none; }
+
 /* Which way the text hangs off the origin. It always goes OUTWARD, away from
    the object, so the leader line never runs back under its own caption. The
    anchors in process.js are chosen to match — see the cell tag in
@@ -295,29 +299,59 @@
 }
 
 /* ---- narrow screens ------------------------------------------------------ *
-   There are no margins to park a caption in, and the satellite is centred and
-   scaled down to fit (see resize() in satelliteScene.js), so a leader line
-   would have nowhere to travel. The captions become one centred line low on
-   the screen instead, still sequenced by the same windows — the steps survive,
-   the pointing does not.                                                     */
+   There are no margins to park a caption in — the satellite is centred and
+   scaled down to fit (see resize() in satelliteScene.js) — so the captions
+   come up one at a time in a single column under it instead of out in the
+   margins.
+
+   THE POINTING SURVIVES NOW. It did not: the line was switched off here, on
+   the reasoning that it had nowhere to travel. What it actually had was a
+   wrong origin — the hook aimed it from step.x/step.y in process.js, which
+   are the WIDE layout's margins, and this block moves the caption somewhere
+   else entirely. The hook measures the origin now (see measureOrigins in
+   useSatelliteFlight.js), so the line runs from this caption up to the part
+   the step is about, which is the one job it has and the reason a phone
+   could not tell which piece was being named.
+
+   It waits for the hero copy, though. This column is where the name, the
+   role and the lede are still fading out until progress 0.42, and a leader
+   line ruled through them reads as a mistake. --line-o is 1 - that fade, so
+   the first two steps arrive as a caption alone and the line joins once the
+   column is clear. The caption itself never waits.
+
+   The origin is the TOP edge of the caption box: the box hangs below it and
+   the line leaves upward, so the two never overlap.                         */
 @media (max-width: 900px) {
   .sat-note {
     left: 50%;
     top: auto;
-    bottom: 12vh;
+    bottom: 13vh;
     width: 0;
   }
-  .sat-note-line { display: none; }
+  .sat-note-line { opacity: var(--line-o, 1); }
   .sat-note-tx,
   .sat-note--left .sat-note-tx,
   .sat-note--right .sat-note-tx {
     left: 50%;
     right: auto;
-    transform: translate(-50%, -50%);
+    /* Hangs below the origin, clear of the line leaving it. */
+    transform: translate(-50%, 0.7rem);
     margin: 0;
-    max-width: min(78vw, 22rem);
+    max-width: min(82vw, 24rem);
     text-align: center;
-    font-size: 0.68rem;
+    font-size: 0.74rem;
   }
-  .sat-note-tx b { display: block; margin: 0 0 0.15rem; }
+  /* The number line: "03 / 05", the count beside the step rather than under
+     it, so the label below it stays the widest thing in the box. */
+  .sat-note-tx b {
+    display: inline;
+    margin: 0 0.3em 0 0;
+    font-size: 0.82rem;
+  }
+  .sat-note-of {
+    display: inline;
+    margin-right: 0.65em;
+    color: rgba(232, 229, 220, 0.45);
+    letter-spacing: 0.14em;
+  }
 }

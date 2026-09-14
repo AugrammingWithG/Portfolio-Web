@@ -82,6 +82,13 @@ export default function SatelliteHero() {
             <i className="sat-note-line" />
             <span className="sat-note-tx">
               <b>{pad(step.n)}</b>
+              {/* Which step of how many. Only the narrow layout shows it —
+                  there the captions arrive one at a time under the satellite
+                  with nothing else on screen to say a sequence is running,
+                  and five steps can go by in one flick without it. Wide
+                  screens have all five origins laid out in the margins, so
+                  the count is already visible in the composition. */}
+              <i className="sat-note-of">/ {pad(PROCESS.length)}</i>
               {step.label}
             </span>
           </li>

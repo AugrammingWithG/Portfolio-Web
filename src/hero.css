@@ -61,7 +61,7 @@
    it.
 
    The flight measures itself from this block's top to Selected Work's top —
-   see readProgress() in useSatelliteFlight.js — so changing this height
+   see readProgress() in scrollTimeline.js — so changing this height
    changes the pace of the whole flight, and nothing else has to follow.
 
    180, down from 500: five viewports of teardown before any work showed was
@@ -73,12 +73,8 @@
   height: 180vh;
 }
 
+/* The pin itself is .runway > .sector in hud.css. */
 .hero {
-  position: sticky;
-  top: 0;
-  height: 100vh;
-  height: 100dvh;
-  min-height: 0; /* .sector's 100vh floor would fight the sticky height */
   padding: 0; /* hero.html manages its own gutters through --pad */
 }
 .hero ::selection { background: var(--brass); color: #000; }
@@ -350,6 +346,21 @@
   color: var(--bone);
 }
 
+/* The positioning line, between the name and the links. Body weight, bone
+   dimmed a step, and it rides in on the same delay as the links so the role
+   and the name land first. */
+.hero-lede {
+  max-width: 34rem;
+  margin: clamp(0.9rem, 1.8vw, 1.3rem) 0 0;
+  font-size: clamp(0.88rem, 1.15vw, 1.02rem);
+  line-height: 1.6;
+  color: rgba(232, 229, 220, 0.78); /* --bone, dimmed a step */
+  opacity: 0;
+  transform: translateY(16px);
+  transition: 0.9s var(--ease) 0.4s;
+}
+.is-loaded .hero-lede { opacity: 1; transform: none; }
+
 /* ---- contact links ------------------------------------------------------- *
    Plain links in a row, as sketched, rather than the button cluster.        */
 .hero-links {
@@ -429,7 +440,17 @@
 @media (max-width: 900px) {
   /* Shorter runway on a phone, where a scroll of the same length in viewports
      is a much longer thumb journey. Same ratio the teardown block used. */
-  .hero-runway { height: 160vh; }
+  /* LONGER THAN THE WIDE ONE, not shorter. It was 160vh against the wide
+     layout's 180, on the usual reasoning that a viewport is more thumb than
+     it is wheel. But the captions span 0.08..0.76 of this runway and there
+     are five of them, so that cut each step to under a third of a screen —
+     and a phone scrolls by flick, not by notch, so one gesture carried the
+     reader past all five. At 215vh a step holds for about 0.45 of a screen.
+     Still vh rather than dvh on purpose: mobile browsers resolve vh against
+     the viewport with the toolbar hidden, so this length is stable while the
+     toolbar comes and goes, and the flight's progress does not jump under a
+     reader who has not scrolled. */
+  .hero-runway { height: 215vh; }
   .hero-grid {
     padding-top: 132px;
     padding-bottom: 80px;
@@ -465,12 +486,6 @@
      screen and the page reads straight through — which is what "reveal the
      sections normally" has to mean here. */
   .hero-runway { height: auto; }
-  .hero {
-    position: relative;
-    height: auto;
-    min-height: 100vh;
-    min-height: 100dvh;
-  }
   /* No flight means nothing writes --hero-fade, but pin it anyway so the copy
      can never end up faded by a stale value. */
   .hero-grid,
@@ -490,6 +505,7 @@
   .hero-role { animation: none; }
   .reveal > *,
   .hero-role,
+  .hero-lede,
   .hero-links,
   .hero-object {
     opacity: 1;

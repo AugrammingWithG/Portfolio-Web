@@ -6,7 +6,7 @@ import "./hud.css";
 import "./hero.css";
 import "./satellite.css";
 import "./selected-work.css";
-import "./skills-keyboard.css";
+import "./skills.css";
 
 createRoot(document.getElementById("root")).render(
   <React.StrictMode>

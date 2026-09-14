@@ -1,0 +1,580 @@
+/* ==========================================================================
+   SKILLS — four groups, as a carousel of four cards.
+
+   Replaced skills-keyboard.css on 2026-09-15. The shell (the sector, the
+   corner brackets, the HUD header, the hint) still comes from hud.css; this
+   file is the deck of panels and nothing else.
+
+   The shape is from two references Augniña sent: full-height panels, each
+   with its subject set huge and vertical down one side, and then a pill-shaped
+   segmented bar over a rail holding ONE card centred with its neighbours
+   peeking in from both edges. There are exactly four cards — one per group,
+   each holding that group's own stack — not one per skill.
+
+   PERFORMANCE. Nothing here blurs a backdrop and nothing animates on scroll.
+   The keyboard's frosted deck and its gold press-glow are gone with it, so
+   this section now costs the compositor nothing at all — which is the right
+   trade for the one section between two WebGL canvases.
+   ========================================================================== */
+
+/* The page settles onto Skills once a scroll ends near it — see the snapping
+   note on html in styles.css. Contact is not a snap point: it is shorter than
+   a viewport, so aligning its top would be asking for scroll that does not
+   exist. */
+.sk { scroll-snap-align: start; }
+
+/* Skills sits below Selected Work, so it opens on 0.58 — the value Selected
+   Work closes with — and hands 0.52 to the footer. It lifts a little through
+   its middle because it is the step back up out of the deepest ground on the
+   site. See the handoff rule in hud.css before touching these. Carried over
+   from the keyboard unchanged: the chain does not care what is inside the
+   section, only where its edges meet its neighbours'. */
+.sk .sector-scrim {
+  --scrim-top: 0.58;
+  /* The middle is darker than the keyboard's was. That section covered most
+     of its own ground with a frosted deck, so the wash only showed at the
+     edges; this one is open across its full width and 0.5 left the middle of
+     the section the brightest thing on the page. The top and bottom are
+     untouched — those are the neighbours' business. */
+  --scrim-mid: 0.64;
+  --scrim-bottom: 0.52;
+}
+
+/* ---- the deck ------------------------------------------------------------ *
+   .sector-body centres its child; the deck sits at the top of it instead, so
+   the cards start directly under the HUD.
+
+   THE DECK IS AS TALL AS ITS TALLEST CARD, and no taller. It used to take
+   `flex: 1` and fill the section, which made every card run to the section's
+   floor — around 200px of empty card under the last line of the longest one,
+   and a great deal more under the short ones. The empty space belongs to the
+   section, not to the cards: below them is just section, which is what the
+   corner brackets and the hint are already framing. */
+.sk-deck-wrap {
+  flex-direction: column;
+  align-items: stretch;
+  justify-content: flex-start;
+  /* Tight to the bar. This was 2.2vh and it read as a band of nothing between
+     the picker and the thing it picks. */
+  gap: clamp(0.6rem, 1.2vh, 0.95rem);
+  min-height: 0;
+  /* Top padding comes off entirely: .sector-body carries a clamp(1rem, 3vw,
+     2rem) that put the bar a long way under the HUD. */
+  padding-top: clamp(0.4rem, 1vh, 0.75rem);
+  padding-bottom: clamp(1.6rem, 3.5vh, 2.4rem); /* clears the hint */
+}
+
+/* ---- the segmented bar --------------------------------------------------- *
+   One pill with a lit block sliding inside it. The segments are equal width
+   rather than sized to their names: the block that moves assumes a step, and a
+   bar whose segments jump about as the label changes reads as four separate
+   buttons rather than one control.                                         */
+.sk-tabs {
+  position: relative;
+  align-self: center;
+  display: flex;
+  width: min(100%, 42rem);
+  padding: 0.28rem;
+  border: 1px solid var(--glass-line);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.03);
+}
+
+/* One element that moves, rather than a background on the selected tab: a
+   background cannot travel between two elements, and the movement is what
+   says the four are one control. */
+.sk-tabs-lit {
+  position: absolute;
+  z-index: 0;
+  top: 0.28rem;
+  bottom: 0.28rem;
+  left: 0.28rem;
+  width: calc((100% - 0.56rem) / var(--n));
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.1);
+  box-shadow: inset 0 0 0 1px rgba(208, 164, 76, 0.28);
+  transform: translateX(calc(var(--t) * 100%));
+  transition: transform 0.35s cubic-bezier(0.22, 0.61, 0.36, 1);
+}
+
+.sk-tab {
+  position: relative;
+  z-index: 1;
+  flex: 1 1 0;
+  min-width: 0;
+  padding: 0.5rem 0.4rem;
+  border: none;
+  border-radius: 999px;
+  background: none;
+  font-family: var(--mono);
+  font-size: clamp(0.58rem, 1.05vw, 0.7rem);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+  white-space: nowrap;
+  cursor: pointer;
+  transition: color 0.25s ease;
+}
+.sk-tab:hover { color: var(--ink-soft); }
+.sk-tab.is-on { color: var(--ink); }
+.sk-tab:focus-visible { outline: 2px solid var(--gold-soft); outline-offset: 2px; }
+
+/* ---- the stage ----------------------------------------------------------- *
+   A flex container so the rail can be STRETCHED to its height rather than
+   asking for it as a percentage: the stage takes what is left of the section
+   and has no height of its own, and a percentage against an auto height
+   resolves to auto — which leaves the cards the height of their text and the
+   section a band of nothing underneath.                                    */
+.sk-stage {
+  --sk-card-w: clamp(18rem, 34vw, 30rem);
+  --sk-gap: clamp(0.6rem, 1.3vw, 1.15rem);
+  position: relative;
+  /* SIZED BY THE RAIL, NOT BY WHAT IS LEFT OF THE SECTION. The stage clips
+     (it has to, so the side cards run off both edges), so a stage that took
+     the leftover height would silently swallow rows the moment a group grew:
+     at 1280x720 the card was already exactly the stage's height with 21px to
+     spare. Content height instead — the section is allowed to run past one
+     screen, which is the documented trade for this section and nothing else
+     on the site. */
+  flex: 0 0 auto;
+  display: flex;
+  /* CENTRED, NOT STRETCHED. The rail is as tall as its tallest card and sits
+     in the middle of whatever the section has left. Stretching the cards to
+     the full stage put nearly 400px of empty card under the last skill in
+     every group — the empty space belongs to the section, which the corner
+     brackets and the hint are already framing, not to the cards. */
+  align-items: center;
+  /* The neighbours are meant to run off both edges: that overhang is the only
+     thing saying there are more groups. A horizontal drag belongs to the rail,
+     a vertical one is the page being scrolled and must still reach it. */
+  overflow: hidden;
+  touch-action: pan-y;
+}
+
+/* ---- the rail ------------------------------------------------------------ *
+   One stage wide, however many cards it holds: the 50% below is half of THIS
+   element, so it has to be the stage's width for the centred card to land on
+   the stage's middle.
+
+   Note the half-card, not half a step. The gap sits AFTER each card, not
+   around it, so card i's middle is i whole steps plus half a CARD; writing it
+   as (i + 0.5) steps puts every card half a gap off centre.              */
+.sk-deck {
+  flex: 0 0 100%;
+  width: 100%;
+  display: flex;
+  align-items: stretch;
+  gap: var(--sk-gap);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  transform: translateX(
+    calc(
+      50% - var(--i) * (var(--sk-card-w) + var(--sk-gap)) - var(--sk-card-w) / 2
+    )
+  );
+  transition: transform 0.45s cubic-bezier(0.22, 0.61, 0.36, 1);
+  will-change: transform;
+}
+
+/* ---- a card -------------------------------------------------------------- *
+   Four cards, the way the reference stands four screens side by side. This
+   started as columns divided by a single hairline down each left edge, which
+   read as a table — rows of data under headings, which is exactly what a
+   skills list must not look like. A closed outline turns each group into its
+   own object instead, and the eye reads four things rather than one grid.
+
+   OUTLINE ONLY. No fill, so the section's own brass wash runs through every
+   card and the row still sits in one piece of light rather than becoming four
+   grey boxes on a warm ground. The hairline is the site's existing
+   --glass-line, the same one the corner brackets and the case-study panel are
+   drawn with, so this adds no new weight to the page.
+
+   The radius is small enough not to argue with the sharp HUD brackets in the
+   corners of the section, and large enough to read as a card rather than a
+   table cell. */
+.sk-panel {
+  position: relative;
+  flex: 0 0 var(--sk-card-w);
+  width: var(--sk-card-w);
+  min-width: 0;
+  min-height: 0;
+  display: flex;
+  /* A COLUMN since 2026-09-15: the group name runs across the top of the card
+     and the stacks list down it, which is how Augniña marked up the screenshot.
+     It was a row with the name set vertically down a rail on the left. */
+  flex-direction: column;
+  gap: clamp(0.5rem, 1.1vh, 0.8rem);
+  padding: clamp(0.95rem, 1.6vw, 1.5rem);
+  border: 1px solid var(--glass-line);
+  border-radius: clamp(8px, 0.9vw, 13px);
+  /* Off to the side: smaller, quieter, pushed back. The centred card is the
+     only one at full size and full brightness. */
+  opacity: 0.3;
+  transform: scale(0.92);
+  transition: opacity 0.4s ease, transform 0.45s cubic-bezier(0.22, 0.61, 0.36, 1),
+    border-color 0.25s ease;
+}
+.sk-panel.is-on {
+  opacity: 1;
+  transform: scale(1);
+  border-color: rgba(208, 164, 76, 0.4);
+}
+.sk-panel:not(.is-on):hover { opacity: 0.5; }
+/* A side card is one press target, not a list of them: its own skill buttons
+   must not be reachable behind the overlay that brings it in. */
+.sk-panel:not(.is-on) .sk-rail,
+.sk-panel:not(.is-on) .sk-body { pointer-events: none; }
+
+/* ---- the arrows ---------------------------------------------------------- *
+   The reference has none, because its rail loops and there is always a card
+   peeking on both sides. Ours does not loop: at the first card the left half
+   of the stage is empty and the whole thing sits lopsided. These fill that
+   side and say what the empty space was failing to.
+
+   Above .sk-panel-hit, which covers a whole side card — an arrow sitting over
+   a side card has to win the press, or the arrow would quietly become "centre
+   the card underneath me".                                               */
+.sk-arrow {
+  position: absolute;
+  z-index: 4;
+  top: 50%;
+  width: clamp(2rem, 2.6vw, 2.5rem);
+  height: clamp(2rem, 2.6vw, 2.5rem);
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border: 1px solid var(--glass-line);
+  border-radius: 50%;
+  background: rgba(12, 13, 16, 0.72);
+  font-size: 1.15rem;
+  line-height: 1;
+  color: var(--ink-soft);
+  cursor: pointer;
+  transform: translateY(-50%);
+  transition: color 0.2s ease, border-color 0.2s ease, background-color 0.2s ease,
+    opacity 0.2s ease;
+}
+.sk-arrow--prev { left: clamp(0.25rem, 1.5vw, 1.25rem); }
+.sk-arrow--next { right: clamp(0.25rem, 1.5vw, 1.25rem); }
+.sk-arrow:hover:not(:disabled),
+.sk-arrow:focus-visible {
+  color: var(--gold-soft);
+  border-color: rgba(208, 164, 76, 0.55);
+  background: rgba(208, 164, 76, 0.12);
+}
+.sk-arrow:focus-visible { outline: 2px solid var(--gold-soft); outline-offset: 2px; }
+/* At the ends the reader is told there is no more work that way, rather than
+   being sent silently back to the start. */
+.sk-arrow:disabled { opacity: 0.22; cursor: default; }
+
+.sk-panel-hit {
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  width: 100%;
+  padding: 0;
+  border: none;
+  border-radius: inherit;
+  background: none;
+  cursor: pointer;
+}
+.sk-panel-hit:focus-visible { outline: 2px solid var(--gold-soft); outline-offset: 2px; }
+
+/* There was a brass rise painted up from each panel's floor here. It went:
+   a radial gradient inside a box is still a box, and at the panel's left and
+   right edges it had not reached transparent, so every panel wore a faint
+   rectangle. The section's own wash is the light here; the outline is the
+   only structure a card needs. */
+
+/* ---- the rail: the group, set vertically --------------------------------- *
+   writing-mode turns the column, text-orientation keeps each letter upright,
+   so it stacks F-R-O-N-T-E-N-D down the card exactly as the reference sets
+   its subject. The size is capped by the card's height as well as its width:
+   a long word like DELIVERY has to fit the column it is standing in.
+
+   There was a second vertical line under the name — the group's "kind", three
+   cards reading "tech" and one "practice · discipline". It went: three cards
+   saying one word said nothing, and the fourth's ran nearly to the card's
+   floor. */
+/* ---- the card's head: the number, then the group ------------------------- */
+.sk-rail {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.15rem;
+  flex: 0 0 auto;
+}
+
+.sk-index {
+  margin: 0;
+  font-family: var(--mono);
+  font-size: 0.58rem;
+  letter-spacing: 0.16em;
+  color: var(--gold);
+}
+.sk-index span { color: var(--ink-3); }
+
+.sk-name {
+  margin: 0;
+  /* HORIZONTAL. It was writing-mode: vertical-rl with text-orientation:
+     upright, stacking F-R-O-N-T-E-N-D down a rail on the left of the card.
+     Augniña marked the screenshot with the word written across the top
+     instead, so the rail is gone and this is the card's title. */
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: clamp(1.35rem, 2.5vw, 2.1rem);
+  line-height: 1;
+  letter-spacing: 0.01em;
+  text-transform: uppercase;
+  color: var(--ink);
+}
+
+/* ---- the skills ---------------------------------------------------------- */
+/* THIS SECTION IS ALLOWED TO RUN PAST ONE SCREEN, and it is the only one that
+   is. The card bodies used to scroll inside themselves so the section could
+   stay exactly a viewport tall — four independent scrollers on one screen,
+   three of which a reader never realises are there. The section grows instead:
+   on a 900-tall window it is one screen exactly, and on a short one (1280x720)
+   it runs about 200px over and the page carries on. A skills list is read top
+   to bottom; it does not need to be a viewport.
+
+   .sector's overflow: hidden clips nothing here, because the box grows to its
+   content rather than being overflowed by it. */
+.sk-body {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+/* ---- the four levels inside a card --------------------------------------- *
+   Everything in here used to be the same size in two greys, so a card read as
+   one texture and the eye had nowhere to land. There are four levels now and
+   each one is a clear step down from the one above it:
+
+     1  the group      the vertical name, far the largest thing on the card
+     2  the blurb      what the group is, in the body face
+     3  the count      a mono rule, the card's own small header
+     4  a skill        name in mono at full brightness, description under it
+                       smaller and a step dimmer
+
+   The step from 4's name to 4's description is the one that was missing: both
+   were 0.72rem and the only difference was colour, so a name did not read as
+   a heading for the line under it. */
+.sk-blurb { /* the label line under the title */
+  margin: 0 0 clamp(0.75rem, 1.6vh, 1rem);
+  font-size: 0.76rem;
+  line-height: 1.5;
+  color: var(--ink-soft);
+}
+
+.sk-count {
+  display: flex;
+  align-items: baseline;
+  gap: 0.4em;
+  margin: 0 0 clamp(0.5rem, 1.1vh, 0.75rem);
+  padding-top: clamp(0.5rem, 1.1vh, 0.7rem);
+  border-top: 1px solid var(--glass-line);
+  font-family: var(--mono);
+  font-size: 0.56rem;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+}
+.sk-count b { font-weight: 500; color: var(--gold); }
+
+/* THE STACKS. They are what the card is for, so they carry the card: bigger
+   than the HUD type around them and spaced to fill it rather than huddling
+   under the title. */
+.sk-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: clamp(0.45rem, 1.1vh, 0.7rem);
+}
+
+/* THE SKILL IS A BUTTON. Its one-line gloss used to sit under it on the card;
+   it moved into the detail panel, which is what made the panel worth opening
+   and what took roughly 200px out of every card. What stays on the card is
+   the part a reader scans: the name, the honesty dot, and the count of
+   shipped projects that name it. */
+.sk-skill {
+  display: flex;
+  align-items: baseline;
+  gap: 0.15em;
+  width: 100%;
+  margin: 0;
+  padding: 0;
+  font-family: var(--mono);
+  font-size: clamp(0.78rem, 1.05vw, 0.9rem);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  text-align: left;
+  color: var(--ink);
+}
+.sk-skill-name { flex: 0 1 auto; }
+
+/* The shipped count, pushed to the far edge of the row: the number of
+   projects in projects.json whose stack names this skill. Hairline, not gold
+   — the gold in this section belongs to the honesty dot, and a second accent
+   competing with it would turn two facts into an argument. */
+/* THE LABEL under each stack — what used to be behind the dialog. Small and
+   quiet against the name above it: two type levels inside one row, so the
+   list still scans as a list of names rather than as a wall of prose. */
+.sk-desc {
+  margin: 0.05rem 0 0;
+  font-size: clamp(0.66rem, 0.78vw, 0.72rem);
+  line-height: 1.4;
+  color: var(--ink-3);
+}
+
+/* The projects that name this stack in their own file. Gold, because it is
+   the thing this section is proudest of, and inline with the name so the
+   claim and its proof are never on separate lines. */
+.sk-used {
+  margin-left: auto;
+  padding-left: 0.6em;
+  font-size: 0.56rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--gold);
+  white-space: nowrap;
+}
+
+.sk-shipped {
+  margin-left: auto;
+  padding: 0.05rem 0.3rem;
+  border: 1px solid var(--glass-line);
+  border-radius: 2px;
+  font-size: 0.56rem;
+  letter-spacing: 0.1em;
+  color: var(--ink-3);
+}
+
+/* ---- interaction --------------------------------------------------------- *
+   Two hover states and one real control, and none of them hides anything.
+
+   A card answers when you are in it — outline up to gold, a millimetre of
+   lift. focus-within, not just hover, so tabbing through gives the same
+   answer a mouse does.
+
+   A row takes a gold rule on its left. The padding is always there and only
+   the colour changes, so nothing shifts under the pointer. */
+.sk-panel {
+  transition: border-color 0.25s ease, transform 0.25s ease;
+}
+.sk-panel:hover,
+.sk-panel:focus-within {
+  border-color: rgba(208, 164, 76, 0.42);
+  transform: translateY(-2px);
+}
+
+.sk-list li {
+  padding-left: 0.7rem;
+  border-left: 2px solid transparent;
+  transition: border-color 0.2s ease;
+}
+.sk-list li:hover,
+.sk-list li:focus-within { border-left-color: var(--gold); }
+
+/* THE FILTER — the honesty dot's own control. It reads as the HUD text it
+   replaced until you are on it, because a button that shouts in the corner of
+   a section is a button people press by accident. */
+.sk-filter {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.15em;
+  padding: 0.15rem 0.4rem;
+  margin: -0.15rem -0.4rem;
+  border: 1px solid transparent;
+  border-radius: 3px;
+  background: none;
+  font: inherit;
+  color: inherit;
+  letter-spacing: inherit;
+  text-transform: inherit;
+  cursor: pointer;
+  transition: border-color 0.2s ease, color 0.2s ease, background-color 0.2s ease;
+}
+.sk-filter:hover,
+.sk-filter:focus-visible {
+  border-color: rgba(208, 164, 76, 0.45);
+  color: var(--ink);
+}
+.sk-filter[aria-pressed="true"] {
+  border-color: rgba(208, 164, 76, 0.6);
+  background: rgba(208, 164, 76, 0.1);
+  color: var(--ink);
+}
+
+/* Pressed, the eight are held up and the rest go quiet. DIMMED, NOT REMOVED:
+   the cards keep their height and not one line moves, so this is a change of
+   emphasis rather than the section rearranging itself while you look at it. */
+.sk.is-filtered .sk-list li:not(.is-learning) {
+  opacity: 0.26;
+}
+.sk-list li { transition: border-color 0.2s ease, opacity 0.3s ease; }
+
+/* GOLD — the honesty dot, and the only accent in this section. It is not a
+   warning: it is the section telling the truth about itself, so it reads as
+   the same gold as every other thing the site is proud of. */
+.sk-dot {
+  display: inline-block;
+  width: 5px;
+  height: 5px;
+  margin-left: 0.5em;
+  border-radius: 50%;
+  background: var(--gold);
+  vertical-align: 0.15em;
+}
+.sk-dot--inline { margin: 0 0.15em; vertical-align: 0.05em; }
+
+@media (max-width: 900px) {
+  /* Narrower than it could be, on purpose: the sliver of the next card either
+     side is the only thing at this width saying there are three more groups.
+     The hint that would have said so is hidden here (hud.css). */
+  .sk-stage { --sk-card-w: min(78vw, 22rem); --sk-gap: 0.7rem; }
+  .sk-panel { padding: clamp(0.9rem, 3.5vw, 1.3rem); }
+  .sk-arrow { width: 1.85rem; height: 1.85rem; font-size: 1rem; }
+  .sk-arrow--prev { left: 0.1rem; }
+  .sk-arrow--next { right: 0.1rem; }
+  .sk-tabs { width: 100%; padding: 0.22rem; }
+  .sk-tab { padding: 0.45rem 0.2rem; font-size: 0.55rem; letter-spacing: 0.08em; }
+  .sk-tabs-lit {
+    top: 0.22rem;
+    bottom: 0.22rem;
+    left: 0.22rem;
+    width: calc((100% - 0.44rem) / var(--n));
+  }
+  .sk-deck-wrap { padding-bottom: clamp(1rem, 3vh, 1.75rem); }
+  .sk-name { font-size: clamp(1.25rem, 5.5vw, 1.9rem); }
+  .sk-blurb { font-size: 0.8rem; }
+  .sk-skill { font-size: 0.74rem; }
+  .sk-desc { font-size: 0.74rem; }
+}
+
+/* ==========================================================================
+   Reduce motion — there is nothing to reduce.
+
+   The section has no animation of its own: no canvas, no transitions on
+   scroll, no press. The only thing that moves is the sideways scroll on a
+   narrow screen, and that is the browser's own, already governed by the
+   reader's settings. This block exists to say that on purpose, so nobody
+   adds motion here without noticing there was none.
+
+   The one thing that does change: the deck stops being one screen tall, so a
+   long list is read down the page instead of inside its own scroller.
+   ========================================================================== */
+@media (prefers-reduced-motion: reduce) {
+  /* The rail and the bar's lit block are the only things here that travel, so
+     they arrive without travelling: the card still changes, it simply does not
+     slide. A carousel that does not change at all would be a card swapping
+     itself while the reader is not looking. */
+  .sk-deck,
+  .sk-tabs-lit { transition: none; }
+  .sk-panel { transition: border-color 0.25s ease, opacity 0.25s ease; }
+  .sk-panel:hover,
+  .sk-panel:focus-within { transform: none; }
+}

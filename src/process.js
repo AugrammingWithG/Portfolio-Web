@@ -31,8 +31,11 @@
 
    THE WINDOWS ARE SEQUENTIAL, overlapping by about the length of one fade so
    a step is always handing over to the next rather than the margin going
-   empty. They end by 0.76: the parts start dissolving at 0.61 and are gone
-   by 0.92, and a label still pointing at nothing reads as a bug.
+   empty. They end before the parts start dissolving (0.8 in
+   satelliteScene.js): a label still pointing at nothing reads as a bug.
+   CAPTIONS_END below is where the last one closes, and it is the moment the
+   page is allowed to carry the reader on into the work — see the carry-in
+   in usePlanetSystem.js. Move a window and that moves with it.
    ========================================================================== */
 
 export const PROCESS = [
@@ -87,3 +90,6 @@ export const PROCESS = [
     out: 0.76,
   },
 ];
+
+/* Where the last caption closes, on the flight's own scale. */
+export const CAPTIONS_END = Math.max(...PROCESS.map((s) => s.out));

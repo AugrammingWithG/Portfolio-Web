@@ -1,7 +1,7 @@
 /* ==========================================================================
    SELECTED WORK — the planet system and the case study panel.
 
-   Ported from planet-case-study-fixed.html. Sizes, spacing, the panel's slide
+   Ported from ../prototypes/planet-case-study-fixed.html. Sizes, spacing, the panel's slide
    curve and its gradient ground are that file's; the colours are the site's
    tokens rather than the prototype's raw hexes, so no second palette enters
    the stylesheet. Gold stays one accent, defined once in styles.css.
@@ -12,12 +12,10 @@
 
    PERFORMANCE. The frosted blur lives on .pw-panel and never changes. The
    warp pulse is a painted gradient on its own layer whose only animated
-   property is opacity, and the labels move by transform. Nothing a warp does
-   can re-trigger a backdrop-filter — the same bargain .kb-glow makes in
-   Skills and .sat-glow makes in the hero.
+   property is opacity, and the tiles in the strip only ever change opacity
+   and colour. Nothing a warp does can re-trigger a backdrop-filter — the
+   same bargain .kb-glow makes in Skills and .sat-glow makes in the hero.
 
-   The previous orbit-and-astronaut version of this section is kept beside it
-   as SelectedWorkOrbit.jsx + selected-work-orbit.css. Neither is imported.
    ========================================================================== */
 
 /* ---- the runway ---------------------------------------------------------- *
@@ -25,21 +23,30 @@
    section pins at the top of the viewport and holds for 45% of one more
    of scroll; over that stretch the six planets come forward out of the depth
    the satellite went into, scrubbed by the scroll (readArrival() in
-   usePlanetSystem.js). Then the section releases and the page goes on to
+   scrollTimeline.js). Then the section releases and the page goes on to
    Skills. Change this height and the arrival's pace changes with it, and
    nothing else has to follow.
 
    --sw-in is that same 0..1, written on the section by the hook. The HUD, the
    corner frame and the hint ride it in with the planets rather than riding
    the section's edge up the screen while there is nothing behind them yet. */
+/* LONGER SINCE 2026-09-15. It was 145vh, sized when the arrival was six
+   planets fading forward out of the dark. It now carries the jump going down
+   and seven rings streaking in inner-to-outer, and at 145 those were sharing
+   about a screen and a half — the rings finished forming while the streaks
+   were still bright, so neither was ever alone on screen. 190 gives each its
+   own stretch. This is not blank scroll: something is arriving over every
+   pixel of it. */
 .sw-runway {
   position: relative;
-  height: 145vh;
-  height: 145dvh;
+  height: 190vh;
+  height: 190dvh;
 }
 /* Where the system is home. Nav, "pull to top", the carry-in and the page's
-   scroll snapping all aim here. One pixel tall and full width rather than a
-   point: a zero-sized snap area is not reliably honoured. */
+   scroll snapping all aim here, and scrollTimeline.js measures it rather than
+   re-deriving where it is — this rule is the one place that knows. One pixel
+   tall and full width rather than a point: a zero-sized snap area is not
+   reliably honoured. */
 .sw-landed {
   position: absolute;
   left: 0;
@@ -51,14 +58,10 @@
   scroll-snap-align: start;
 }
 
+/* The pin itself is .runway > .sector in hud.css. */
 .sw {
   --pw-line: rgba(255, 255, 255, 0.08);
   --sw-in: 1;
-  position: sticky;
-  top: 0;
-  height: 100vh;
-  height: 100dvh;
-  min-height: 0; /* .sector's 100vh floor would fight the sticky height */
   overflow: hidden;
 }
 .sw .sector-hud,
@@ -85,8 +88,8 @@
    header and hint were eating a fifth of that frame and cropping it further.
 
    The HUD, the panel and the hint sit above it on their own z-index; the
-   canvas is behind all of them and the labels are positioned in the same box,
-   so the two can never disagree about where a planet is.                    */
+   canvas is behind all of them and the strip of tiles sits in the same box,
+   along its bottom edge.                                                    */
 .pw-stage {
   position: absolute;
   inset: 0;
@@ -125,81 +128,137 @@
   will-change: opacity;
 }
 
-/* ---- the labels ---------------------------------------------------------- *
-   A real list of the work. The scene writes each button's transform and its
-   display every frame; everything else about them is CSS. They are the only
-   way in without a pointer, so they carry a proper focus ring.
+/* ---- the strip ----------------------------------------------------------- *
+   The row of tiles along the bottom of the section: every project as a small
+   planet with its name in a rectangle, after the scale strip in the
+   TRAPPIST-1 reference. It is a real list of real buttons — the only way in
+   without a pointer, and the whole section when there is no WebGL — so it
+   carries a proper focus ring.
+
+   The scene writes each tile's opacity as its planet arrives and toggles its
+   pointer-events until the system has landed; the layout is all here. Above
+   the hint, below the orbit: the orbit's CENTRE in planetScene.js is set so
+   the outer ring's near side clears this row. Move one and check the other.
 
    The <ul> is inert to the pointer so a drag anywhere on the stage still
-   orbits the system — only the buttons themselves take clicks.             */
-.pw-labels {
+   tilts the system — only the buttons themselves take input.              */
+.pw-strip {
   position: absolute;
-  inset: 0;
+  align-items: end;
+  left: clamp(1rem, 3vw, 2.25rem);
+  right: clamp(1rem, 3vw, 2.25rem);
+  bottom: clamp(3.6rem, 7vh, 5rem);
+  display: flex;
+  justify-content: center;
+  gap: clamp(0.4rem, 1vw, 0.9rem);
   margin: 0;
   padding: 0;
   list-style: none;
   pointer-events: none;
+  transition: opacity 0.35s ease, visibility 0s;
+}
+.pw-strip li {
+  flex: 1 1 0;
+  min-width: 0;
+  max-width: 13.5rem;
+}
+/* Prev/Next in the panel carry the navigation while a case study is open,
+   and the staged planet needs the floor. */
+.sw.is-open .pw-strip {
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.35s ease, visibility 0s linear 0.35s;
 }
 
 .pw-label {
-  position: absolute;
-  top: 0;
-  left: 0;
-  display: none; /* the scene shows it once it has somewhere to put it */
-  align-items: baseline;
-  gap: 0.5em;
-  padding: 0.3rem 0.45rem;
-  border: 1px solid transparent;
-  border-radius: 4px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+  width: 100%;
+  padding: 0.35rem 0.2rem 0;
+  border: none;
   background: none;
   pointer-events: auto;
   cursor: pointer;
-  white-space: nowrap;
-  font-family: var(--mono);
-  font-size: 0.69rem;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
   color: var(--ink-dim);
-  transition: color 0.2s ease, border-color 0.2s ease;
+  opacity: 0; /* the scene fades it in with its planet */
+  transition: color 0.2s ease;
 }
+.pw-label:focus-visible { outline: none; }
+
+/* The small planet. Dark globe, gold band — the same two materials as the
+   scene, in two strokes. */
+.pw-tile-orb {
+  width: clamp(3.1rem, 4.7vw, 4.3rem);
+  height: auto;
+  aspect-ratio: 1;
+  overflow: visible;
+  transition: transform 0.25s ease;
+}
+.pw-tile-orb circle {
+  fill: #2b2e34;
+  stroke: rgba(255, 255, 255, 0.14);
+  stroke-width: 1;
+}
+.pw-tile-orb ellipse {
+  fill: none;
+  stroke: var(--gold);
+  stroke-width: 1.6;
+  opacity: 0.75;
+  transition: opacity 0.2s ease, stroke 0.2s ease;
+}
+
+/* The rectangle with the name in it. Every box is the same height whether its
+   name takes one line or two — min-height holds two lines' worth and the
+   content centres in it, so a long name like Gourmet Getaway Tours does not
+   leave the row with a ragged bottom edge. Raise the font here and raise this
+   with it. */
+.pw-tile-tag {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: 100%;
+  min-height: 3.2rem;
+  padding: 0.52rem 0.62rem;
+  border: 1px solid var(--pw-line);
+  border-radius: 3px;
+  background: rgba(12, 13, 16, 0.55);
+  font-family: var(--mono);
+  font-size: 0.71rem;
+  line-height: 1.4;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  text-align: center;
+  transition: border-color 0.2s ease, background-color 0.2s ease;
+}
+.pw-tile-text { display: inline; }
 .pw-label .n { color: var(--ink-3); }
 .pw-label-name { display: inline; }
 
-/* Hover comes from the raycaster, not from CSS :hover — the pointer is over
-   the planet, which is canvas, not over the button. */
+/* Hover comes from either end: the pointer over this tile, or the raycaster
+   over the planet in orbit (is-hot). Both light the same tile. */
 .pw-label.is-hot,
 .pw-label:hover { color: var(--gold-soft); }
-.pw-label:focus-visible {
-  outline: 2px solid var(--gold-soft);
-  outline-offset: 2px;
-  color: var(--gold-soft);
+.pw-label.is-hot .pw-tile-tag,
+.pw-label:hover .pw-tile-tag,
+.pw-label:focus-visible .pw-tile-tag {
+  border-color: rgba(208, 164, 76, 0.55);
+  background: rgba(208, 164, 76, 0.08);
 }
-
-/* Incoming work's label used to be printed a step dimmer than the rest, and
-   to refuse the gold on hover. It reads at the same weight as every other name
-   now — the SOON chip beside it is what says it has not shipped, and saying it
-   twice was the section deciding which work mattered. The .is-soon class went
-   with the rules; `soon` still drives the chip and the panel's copy. */
+.pw-label.is-hot .pw-tile-orb,
+.pw-label:hover .pw-tile-orb { transform: translateY(-3px); }
+.pw-label.is-hot .pw-tile-orb ellipse,
+.pw-label:hover .pw-tile-orb ellipse { opacity: 1; stroke: var(--gold-soft); }
+.pw-label:focus-visible { color: var(--gold-soft); }
+.pw-label:focus-visible .pw-tile-tag { outline: 2px solid var(--gold-soft); outline-offset: 2px; }
 
 /* ---- no WebGL ------------------------------------------------------------ *
-   If the scene never loads there is nothing to position the labels over, and
-   left alone they would stay hidden and the section would be empty. Here they
-   stop being positioned and become what they always were underneath: a plain
-   list of the work, in order, each one still opening its case study. The
-   panel does not need the canvas to work.                                   */
-.sw.is-fallback .pw-labels {
-  position: static;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.5rem 1.4rem;
-  padding: clamp(2rem, 8vh, 5rem) clamp(0.5rem, 2vw, 1.75rem);
-  pointer-events: auto;
-}
-.sw.is-fallback .pw-label {
-  position: static;
-  display: inline-flex;
-  transform: none;
-}
+   If the scene never loads there is nothing to fade the tiles in, and left
+   alone they would stay at opacity 0 and the section would be empty. Here
+   they simply show, in the same row, each one still opening its case study.
+   The panel does not need the canvas to work.                             */
+.sw.is-fallback .pw-label { opacity: 1; pointer-events: auto; }
 
 .pw-soon {
   margin-left: 0.2em;
@@ -243,24 +302,38 @@
 /* ---- the case study ------------------------------------------------------ *
    The prototype's panel: full height on the right, sliding in from off-stage,
    its own scroll, and a gradient that fades to nothing on its left edge so
-   the planet is never cut off by a hard border.                             */
+   the planet is never cut off by a hard border.
+
+   WIDTH. The prototype's was 460px. It grew to 560 on 2026-09-15 when the
+   logos arrived, then to 58vw the same day at Augniña's ask: she drew the
+   line she wanted the copy to start at, about 44% of the frame, just right
+   of the staged planet's edge (it rests at STAGE in planetScene.js and its
+   right edge lands near 38% of a 16:9 frame). 58vw less the panel's own
+   padding puts the text there. The 560 floor keeps the header's tile and
+   the recording readable on a small laptop, and the ≤720px rule below takes
+   over before the floor could exceed the frame. The fade on the left edge is
+   the same 22% as before, so the planet still runs under it softly.       */
 .pw-panel {
   position: absolute;
   z-index: 6;
   top: 0;
   right: 0;
   height: 100%;
-  width: min(460px, 86vw);
-  padding: clamp(4.5rem, 11vh, 7.5rem) clamp(1.5rem, 3vw, 2.75rem) clamp(2rem, 5vh, 2.5rem);
+  width: max(560px, 58vw);
+  padding: clamp(4.5rem, 11vh, 7.5rem) clamp(1.5rem, 3vw, 2.75rem) clamp(2rem, 5vh, 2.5rem)
+    max(3.25rem, 3vw); /* always past the 3rem mask below */
   overflow-y: auto;
   overscroll-behavior: contain;
   background: linear-gradient(90deg, transparent, rgba(12, 13, 16, 0.74) 22%);
   -webkit-backdrop-filter: blur(18px);
   backdrop-filter: blur(18px);
-  /* Masked to match the gradient, so the blur fades out with the ground
-     instead of ending on a vertical line down the middle of the stage. */
-  -webkit-mask-image: linear-gradient(90deg, transparent, #000 22%);
-  mask-image: linear-gradient(90deg, transparent, #000 22%);
+  /* Masked so the blur fades out instead of ending on a vertical line down
+     the stage. The mask is SHORTER than the ground's gradient on purpose: it
+     masks the text too, and at 58vw the old 22% (180px+) ran under the
+     first words of every line and dimmed them. 3rem ends inside the left
+     padding, so the copy is never under it; the ground keeps its long fade. */
+  -webkit-mask-image: linear-gradient(90deg, transparent, #000 3rem);
+  mask-image: linear-gradient(90deg, transparent, #000 3rem);
   transform: translateX(105%);
   visibility: hidden;
   transition: transform 0.7s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.3s ease,
@@ -284,8 +357,37 @@
   color: var(--ink-3);
 }
 
+/* The mark and the name. A row when there is a logo, and the text block on
+   its own when there is not — the class is what says which, so the name never
+   indents to leave room for a tile that is not there. The tile is a square
+   app icon with its own ground, shown as it is: its corners rounded the way
+   the source files are, a hairline round it so a dark ground still reads as
+   a tile on the dark panel, and no tint — a logo is the client's, not the
+   site's. */
+.pw-head {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-top: 0.7rem;
+}
+.pw-head-text { min-width: 0; }
+.pw-logo {
+  flex: 0 0 auto;
+  width: clamp(3.25rem, 6vw, 4.25rem);
+  height: auto;
+  aspect-ratio: 1;
+  border: 1px solid var(--pw-line);
+  border-radius: 14%;
+  background: rgba(255, 255, 255, 0.03);
+  /* contain, not cover: five of these are square app icons where the two are
+     identical, but Gourmet Getaway's is a wide wordmark on transparency and
+     cover would crop it to its middle. Contained, it letterboxes inside the
+     tile instead. */
+  object-fit: contain;
+}
+
 .pw-name {
-  margin: 0.7rem 0 0.3rem;
+  margin: 0 0 0.3rem;
   font-family: var(--font-display);
   font-size: clamp(1.7rem, 3.4vw, 2.25rem);
   font-weight: 600;
@@ -295,11 +397,13 @@
 }
 
 .pw-tag {
-  margin: 0 0 1.5rem;
+  margin: 0;
   font-size: 0.78rem;
   line-height: 1.5;
   color: var(--ink-soft);
 }
+
+.pw-head + .pw-row { margin-top: 1.5rem; }
 
 .pw-row {
   padding: 1rem 0;
@@ -360,6 +464,20 @@
   font-size: 0.74rem;
   line-height: 1.5;
   color: var(--ink-3);
+}
+
+/* ---- the recording ------------------------------------------------------- *
+   Framed the same way as a screenshot: hairline, soft corners, no gold. The
+   width/height attributes on the element hold its 16:9 box before the poster
+   lands, so the panel does not jump. */
+.pw-video {
+  display: block;
+  width: 100%;
+  height: auto;
+  aspect-ratio: 16 / 9;
+  border: 1px solid var(--pw-line);
+  border-radius: 3px;
+  background: rgba(255, 255, 255, 0.03);
 }
 
 /* ---- the screenshots ----------------------------------------------------- *
@@ -434,13 +552,16 @@
   /* A shorter arrival on a phone, where the same stretch in viewports is a
      lot more thumb — the hero's runway is cut the same way. */
   .sw-runway {
-    height: 140vh;
-    height: 140dvh;
+    height: 175vh;
+    height: 175dvh;
   }
 
   .pw-panel {
     width: 100%;
     padding-top: clamp(3.5rem, 9vh, 5rem);
+    /* The horizontal mask is replaced by a vertical one below, so the wide
+       left padding that clears it on a desktop is just lost width here. */
+    padding-left: clamp(1.5rem, 3vw, 2.75rem);
     /* Back sits centred at the bottom of the section here, not in the corner,
        so the panel has to end above it — otherwise Prev/Next scroll underneath
        it and all three end up stacked on the same row. */
@@ -459,8 +580,26 @@
     transform: translateX(50%);
   }
 
-  /* Labels crowd badly at this width, so they lose the number and tighten. */
-  .pw-label { font-size: 0.62rem; letter-spacing: 0.1em; }
+  /* Seven tiles do not fit one row here: two rows of the same tiles, the
+     number dropped, the type tightened. The orbit above is turned up toward
+     the camera on a frame this shape (squashFor in planetScene.js), so it
+     needs less height and leaves the room. */
+  .pw-strip {
+    flex-wrap: wrap;
+    gap: 0.4rem 0.3rem;
+    bottom: clamp(3.2rem, 6vh, 4.25rem);
+  }
+  .pw-strip li { flex: 1 1 22%; max-width: 30%; }
+  /* Two rows of tiles already take a quarter of a phone, so these grow less
+     than the wide ones do. Three lines' worth of box: at this width Gourmet
+     Getaway Tours is three lines and everything else is one or two. */
+  .pw-tile-orb { width: clamp(2.4rem, 11vw, 3rem); }
+  .pw-tile-tag {
+    font-size: 0.61rem;
+    letter-spacing: 0.07em;
+    padding: 0.42rem 0.34rem;
+    min-height: 3.5rem;
+  }
   .pw-label .n { display: none; }
 }
 
@@ -472,20 +611,11 @@
    fades instead of flying in from off-stage.
    ========================================================================== */
 @media (prefers-reduced-motion: reduce) {
-  /* No arrival to scrub, so no runway to scrub it over: the section is an
-     ordinary one-screen section again, and readArrival() reads a runway with
-     no spare height as already landed. */
+  /* No arrival to scrub, so no stretch to scrub it over. The anchor moves to
+     the top with it — still a real element, because the nav points at it and
+     scrollTimeline.js measures it: a collapsed runway reads as landed. */
   .sw-runway { height: auto; }
-  /* Still a real anchor — the nav points at it — but with no stretch to sit at
-     the end of, it sits at the top. display:none would make #work-landed
-     unreachable and the nav link a no-op. */
-  .sw-landed { top: 0; bottom: auto; }
-  .sw {
-    position: relative;
-    height: auto;
-    min-height: 100vh;
-    min-height: 100dvh;
-  }
+  .sw-landed { top: 0; }
 
   .pw-panel {
     transform: none;
@@ -499,4 +629,132 @@
   }
   .pw-canvas { transition: none; }
   .pw-back { transition: opacity 0.2s ease, visibility 0s; }
+}
+
+/* ==========================================================================
+   THE NAME BAR — the way in for somebody who does not know the planets are
+   clickable (2026-09-15).
+
+   Augniña's problem, in her words: "if there were a normal guy and non techy,
+   he wouldn't know that he has to click the planet so that he can see my
+   work." Everything this section had was either a diagram or a legend under
+   one. A recruiter reads project NAMES long before they wonder what a planet
+   is for, so the seven names sit in a pill at the top of the section in the
+   same shape as the group picker in Skills, and pressing one opens its case
+   study.
+
+   It does not touch the orbit. The canvas, the arrival, the satellite handoff
+   and the strip of tiles are all exactly as they were; this sits above them
+   on its own layer.
+
+   An earlier attempt at this problem — a gold call-to-action, a wave of light
+   along the tiles and a name following the cursor — was built and rejected.
+   The lesson it left: the fix is not a better hint, it is putting the work
+   itself where it is read first.
+   ========================================================================== */
+.pw-bar {
+  position: absolute;
+  z-index: 6;
+  top: clamp(2.9rem, 7.5vh, 4.2rem);
+  left: clamp(1rem, 3vw, 2.25rem);
+  right: clamp(1rem, 3vw, 2.25rem);
+  display: flex;
+  justify-content: center;
+  /* Rides the arrival in with the planets, the same as the HUD and the frame
+     — see --sw-in. Naming seven projects that have not landed yet would be
+     pointing at an empty frame. */
+  opacity: var(--sw-in);
+  transition: opacity 0.35s ease, visibility 0s;
+}
+
+/* Down with the strip while a case study is open: the panel is 58vw and would
+   cover it from the fourth name onward, leaving three reachable names and a
+   highlight nobody can see. */
+.sw.is-open .pw-bar {
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.35s ease, visibility 0s linear 0.35s;
+}
+
+.pw-bar ul {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.2rem;
+  max-width: 100%;
+  margin: 0;
+  padding: 0.28rem;
+  border: 1px solid var(--glass-line);
+  border-radius: 999px;
+  background: rgba(12, 13, 16, 0.55);
+  list-style: none;
+}
+
+.pw-bar-item {
+  display: flex;
+  align-items: baseline;
+  gap: 0.45em;
+  padding: 0.45rem 0.8rem;
+  border: none;
+  border-radius: 999px;
+  background: none;
+  font-family: var(--mono);
+  font-size: clamp(0.55rem, 0.78vw, 0.65rem);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+  white-space: nowrap;
+  cursor: pointer;
+  transition: color 0.2s ease, background-color 0.2s ease;
+}
+.pw-bar-item .n { color: rgba(255, 255, 255, 0.28); }
+
+.pw-bar-item:hover,
+.pw-bar-item:focus-visible { color: var(--ink); background: rgba(255, 255, 255, 0.05); }
+.pw-bar-item:hover .n,
+.pw-bar-item:focus-visible .n { color: var(--gold); }
+.pw-bar-item:focus-visible { outline: 2px solid var(--gold-soft); outline-offset: 2px; }
+
+/* The one that is open. Same fill and same gold hairline as the lit segment
+   in Skills' group picker, so the two bars read as one idea even though one
+   slides and this one does not. */
+.pw-bar-item.is-on {
+  color: var(--ink);
+  background: rgba(255, 255, 255, 0.1);
+  box-shadow: inset 0 0 0 1px rgba(208, 164, 76, 0.28);
+}
+.pw-bar-item.is-on .n { color: var(--gold); }
+
+.pw-bar-soon {
+  padding: 1px 5px;
+  border: 1px solid var(--glass-line);
+  border-radius: 2px;
+  font-size: 0.5rem;
+  letter-spacing: 0.14em;
+  color: var(--ink-3);
+}
+
+/* ==========================================================================
+   Narrow — the bar wraps to as many rows as it needs, and the tiles below it
+   give up the room.
+   ========================================================================== */
+@media (max-width: 900px) {
+  .pw-bar {
+    top: clamp(2.6rem, 6.5vh, 3.4rem);
+    left: clamp(0.5rem, 2vw, 1rem);
+    right: clamp(0.5rem, 2vw, 1rem);
+  }
+  .pw-bar ul {
+    /* A pill is the wrong shape once the row wraps: the corners stop being
+       round ends and start being a blob. A small radius reads as a panel of
+       chips, which is what it becomes here. */
+    border-radius: 10px;
+    padding: 0.22rem;
+    gap: 0.15rem;
+  }
+  .pw-bar-item {
+    padding: 0.32rem 0.5rem;
+    font-size: 0.52rem;
+    letter-spacing: 0.06em;
+  }
 }
